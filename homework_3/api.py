@@ -85,7 +85,7 @@ class Field(object):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, required=True, nullable=False):
-        self._errors = []
+        self.errors = []
         self.value = None
         self.null_value = ''
         self.required = required
@@ -93,9 +93,9 @@ class Field(object):
 
     def set(self, value):
         if not self.nullable and value == self.null_value:
-            self._errors.append(FIELD_NULLABLE_ERROR)
+            self.errors.append(FIELD_NULLABLE_ERROR)
         elif self.required and value == None:
-            self._errors.append(FIELD_REQUIRED_ERROR)
+            self.errors.append(FIELD_REQUIRED_ERROR)
         else:
             self.value = value
 
@@ -104,7 +104,7 @@ class Field(object):
 
     @property
     def is_valid(self):
-        return not self._errors
+        return not self.errors
 
 
 class CharField(Field):
@@ -112,7 +112,7 @@ class CharField(Field):
     def set(self, value):
         super().set(value)
         if not value == self.null_value and not isinstance(value, str):
-            self._errors.append(FIELD_CHAR_ERROR)
+            self.errors.append(FIELD_CHAR_ERROR)
             self.set_null()
 
 
@@ -126,7 +126,7 @@ class ArgumentsField(Field):
     def set(self, value):
         super().set(value)
         if not value == self.null_value and not isinstance(value, dict):
-            self._errors.append(FIELD_ARG_ERROR)
+            self.errors.append(FIELD_ARG_ERROR)
             self.set_null()
 
 
@@ -135,7 +135,7 @@ class EmailField(CharField):
     def set(self, value):
         super().set(value)
         if not value == self.null_value and not '@' in value:
-            self._errors.append(FIELD_EMAIL_ERROR)
+            self.errors.append(FIELD_EMAIL_ERROR)
             self.set_null()
 
 
@@ -144,7 +144,7 @@ class PhoneField(Field):
     def set(self, value):
         super().set(value)
         if not value == self.null_value and not re.match(phone_pattern, str(value)):
-            self._errors.append(FIELD_PHONE_ERROR)
+            self.errors.append(FIELD_PHONE_ERROR)
             self.set_null()
 
 
@@ -156,7 +156,7 @@ class DateField(Field):
             try:
                 datetime.datetime.strptime(value, '%d.%m.%Y')
             except ValueError:
-                self._errors.append(FIELD_DATE_ERROR)
+                self.errors.append(FIELD_DATE_ERROR)
                 self.set_null()
 
 
@@ -168,7 +168,7 @@ class BirthDayField(DateField):
             try:
                 bdate = datetime.datetime.strptime(value, '%d.%m.%Y')
                 if datetime.datetime.now().year - bdate.year > 70:
-                    self._errors.append(FIELD_BIRTHDAY_ERROR)
+                    self.errors.append(FIELD_BIRTHDAY_ERROR)
                     self.set_null()
             except:
                 pass
@@ -179,7 +179,7 @@ class GenderField(Field):
     def set(self, value):
         super().set(value)
         if not value == self.null_value and value not in GENDERS:
-            self._errors.append(FIELD_GENDER_ERROR)
+            self.errors.append(FIELD_GENDER_ERROR)
             self.set_null()
 
 
@@ -193,10 +193,10 @@ class ClientIDsField(Field):
     def set(self, value):
         super().set(value)
         if not isinstance(value, list):
-            self._errors.append(FIELD_LIST_ERROR)
+            self.errors.append(FIELD_LIST_ERROR)
             self.set_null()
         if not all(isinstance(v, int) and v >= 0 for v in value):
-            self._errors.append(FIELD_IDS_ERROR)
+            self.errors.append(FIELD_IDS_ERROR)
             self.set_null()
 
 
@@ -216,7 +216,7 @@ class RequestMetaclass(type):
 class Request(metaclass=RequestMetaclass):
 
     def __init__(self, set_values, **kwargs):
-        self._errors = []
+        self.errors = []
         self.request_handler = None
         self.fields_list = []
         self.valid_fields = []
@@ -226,7 +226,7 @@ class Request(metaclass=RequestMetaclass):
             self.fields_list.append(field_name)
         for key, field in self.fields:
             field.set_null()
-            field._errors = []
+            field.errors = []
 
         if set_values:
             self.set_values(kwargs)
@@ -243,7 +243,7 @@ class Request(metaclass=RequestMetaclass):
         for key, field in self.fields:
             if not field.is_valid:
                 errors += 1
-                for err in field._errors:
+                for err in field.errors:
                     logging.error("Field '{}' error: {}".format(key, FIELD_REQUEST_ERRORS[err]))
             if not field.value == field.null_value:
                 self.valid_fields.append(key)
@@ -251,15 +251,15 @@ class Request(metaclass=RequestMetaclass):
     @property
     def is_valid(self):
 
-        field_err = len(self._errors)
+        field_err = len(self.errors)
         for key, field in self.fields:
-            field_err += len(field._errors)
+            field_err += len(field.errors)
 
         rh_field_err = 0
         if self.request_handler:
-            rh_field_err = len(self.request_handler._errors)
+            rh_field_err = len(self.request_handler.errors)
             for key, field in self.request_handler.fields:
-                rh_field_err += len(field._errors)
+                rh_field_err += len(field.errors)
 
         if field_err == 0 and rh_field_err == 0:
             return True
@@ -303,7 +303,7 @@ class OnlineScoreRequest(Request):
         field_pairs = [("phone", "email"), ("first_name", "last_name"), ("gender", "birthday")]
         if not any(all(name in self.valid_fields for name in pair) for pair in field_pairs):
             logging.error(FIELD_REQUEST_ERRORS[REQUEST_ARG_ERROR])
-            self._errors.append(REQUEST_ARG_ERROR)
+            self.errors.append(REQUEST_ARG_ERROR)
 
         if self.is_valid:
             logging.info(ARGUMENTS_VALID)
@@ -348,7 +348,7 @@ class MethodRequest(Request):
             args = self.arguments.value
             self.request_handler = handlers[self.method.value](False, **args)
         except KeyError:
-            self._errors.append(REQUEST_BAD_HANDLER_ERROR)
+            self.errors.append(REQUEST_BAD_HANDLER_ERROR)
 
         if self.request_handler:
             self.request_handler.set_values(self.arguments.value)
@@ -359,11 +359,11 @@ class MethodRequest(Request):
         self.check_auth()
 
         if not self.is_good_request:
-            return {"message": ERRORS[INVALID_REQUEST]}, INVALID_REQUEST
+            return {"message": self.get_errors_message(INVALID_REQUEST)}, INVALID_REQUEST
         if not self.is_authorized:
-            return {"message": ERRORS[FORBIDDEN]}, FORBIDDEN
+            return {"message": self.get_errors_message(FORBIDDEN)}, FORBIDDEN
         if not self.is_valid:
-            return {"message": ERRORS[INVALID_REQUEST]}, INVALID_REQUEST
+            return {"message": self.get_errors_message(INVALID_REQUEST)}, INVALID_REQUEST
 
         return self.request_handler.get_result(self.is_admin, store)
 
@@ -374,11 +374,11 @@ class MethodRequest(Request):
 
     @property
     def is_authorized(self):
-        return not REQUEST_AUTH_ERROR in self._errors
+        return not REQUEST_AUTH_ERROR in self.errors
 
     @property
     def is_good_request(self):
-        return not REQUEST_BAD_HANDLER_ERROR in self._errors
+        return not REQUEST_BAD_HANDLER_ERROR in self.errors
 
     def check_auth(self):
         if self.is_admin:
@@ -396,7 +396,20 @@ class MethodRequest(Request):
             logging.info(USER_AUTHORIZED)
         else:
             logging.error(REQUEST_AUTH_ERROR)
-            self._errors.append(REQUEST_AUTH_ERROR)
+            self.errors.append(REQUEST_AUTH_ERROR)
+
+    def get_errors_message(self, global_error_id):
+        msg = ERRORS[global_error_id] + " : "
+        for key, field in self.fields:
+            for error in field.errors:
+                msg += "Field '{}' error '{}'. ".format(field._name, FIELD_REQUEST_ERRORS[error])
+
+        if self.request_handler:
+            for key, field in self.request_handler.fields:
+                for error in field.errors:
+                    msg += "Argument '{}' error '{}'. ".format(field._name, FIELD_REQUEST_ERRORS[error])
+
+        return msg
 
 
 def method_handler(request, ctx, store):
