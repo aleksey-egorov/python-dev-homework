@@ -36,6 +36,8 @@ class TestSuite(unittest.TestCase):
             request["token"] = hashlib.sha512(msg.encode('utf-8')).hexdigest()
 
 
+    ## Common tests
+
     def test_empty_request(self):
         _, code = self.get_response({})
         self.assertEqual(api.INVALID_REQUEST, code)
@@ -138,18 +140,13 @@ class TestSuite(unittest.TestCase):
     ## Method field tests
 
     @cases([
-        {"account": "admin", "login": "5675",
-         "method": "online_score",
-         "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
+         {"account": "admin", "login": "5675",
+          "method": "online_score",
+          "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
                        "first_name": "Ivan", "last_name": "Petrov"}},
          {"account": "ivan", "login": "-1",
           "method": "clients_interests",
-          "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
-                       "first_name": "Ivan", "last_name": "Petrov"}},
-         {"account": "ivan", "login": "12341",
-          "method": "",
-          "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
-                       "first_name": "Ivan", "last_name": "Petrov"}},
+          "arguments": {"client_ids": [6,7], "date": "20.07.2017"}},
     ])
     def test_ok_method_field(self, request):
         self.set_valid_auth(request)
@@ -158,23 +155,62 @@ class TestSuite(unittest.TestCase):
 
 
     @cases([
-        {"account": "admin", "login": 456,
-         "method": "online_score",
+        {"account": "admin", "login": "fyt54e",
          "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
                        "first_name": "Ivan", "last_name": "Petrov"}},
-        {"account": "ivan", "login": {4,5},
-         "method": "online_score",
+        {"account": "ivan", "login": "85uyg",
+         "method": "",
          "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
                        "first_name": "Ivan", "last_name": "Petrov"}},
-        {"account": "ivan", "login": [7,56],
-         "method": "online_score",
+        {"account": "ivan", "login": "87687t8g",
+         "method": "unknown",
          "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
                        "first_name": "Ivan", "last_name": "Petrov"}},
     ])
-    def ttest_invalid_method_field(self, request):
+    def test_invalid_method_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
+        self.assertEqual(api.INVALID_REQUEST, code)
+
+
+    ## Token field tests
+
+    @cases([
+         {"login": "ivan",
+          "method": "online_score",
+          "token": "fb2e72c45f284600abf73f77024716720fd5a74dd6d738ae4950026b605c34179e19777eb2bd701a75f3f01bc18eeff8fde7d7740852d979213ddcc3d1931265",
+          "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+         {"account": "ivan", "login": "ivan1",
+           "token": "9ce4596ad0cdd2f2f24d6e6fc534a2f9d6cdfe481e8755558c9dfd349fec4bd6776f44c19ff8f780325c6c38112d811edb5dd2d05158f6c9a8ae9698e1ba6f56",
+          "method": "clients_interests",
+          "arguments": {"client_ids": [6,7], "date": "20.07.2017"}},
+    ])
+    def test_ok_token_field(self, request):
+        response, code = self.get_response(request)
+        self.assertEqual(api.OK, code)
+
+
+    @cases([
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+        {"login": "ivan",
+         "method": "online_score",
+         "token": "",
+         "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+        {"account": "ivan", "login": "ivan1",
+         "token": "05158f6c9a8ae9698e1ba6f56",
+         "method": "clients_interests",
+         "arguments": {"client_ids": [6, 7], "date": "20.07.2017"}},
+    ])
+    def test_invalid_token_field(self, request):
+        response, code = self.get_response(request)
         self.assertEqual(api.FORBIDDEN, code)
+
+
 
 
 if __name__ == "__main__":

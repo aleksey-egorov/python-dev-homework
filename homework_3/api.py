@@ -405,7 +405,7 @@ class MethodRequest(Request):
         if digest == self.token.value:
             logging.info(USER_AUTHORIZED)
         else:
-            logging.error(REQUEST_AUTH_ERROR)
+            logging.error(FIELD_REQUEST_ERRORS[REQUEST_AUTH_ERROR])
             self.errors.append(REQUEST_AUTH_ERROR)
 
 
