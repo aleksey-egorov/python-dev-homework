@@ -7,11 +7,13 @@ import functools
 import api
 
 
+
 def cases(cases):
     def decorator(f):
         @functools.wraps(f)
         def wrapper(*args):
             for c in cases:
+                print ("\n---\nFunction: {}, Case: {} ".format(f.__name__, c))
                 new_args = args + (c if isinstance(c, tuple) else (c,))
                 f(*new_args)
         return wrapper

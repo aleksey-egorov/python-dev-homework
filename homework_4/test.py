@@ -135,5 +135,47 @@ class TestSuite(unittest.TestCase):
         self.assertEqual(api.FORBIDDEN, code)
 
 
+    ## Method field tests
+
+    @cases([
+        {"account": "admin", "login": "5675",
+         "method": "online_score",
+         "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+         {"account": "ivan", "login": "-1",
+          "method": "clients_interests",
+          "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+         {"account": "ivan", "login": "12341",
+          "method": "",
+          "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+    ])
+    def test_ok_method_field(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.OK, code)
+
+
+    @cases([
+        {"account": "admin", "login": 456,
+         "method": "online_score",
+         "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+        {"account": "ivan", "login": {4,5},
+         "method": "online_score",
+         "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+        {"account": "ivan", "login": [7,56],
+         "method": "online_score",
+         "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+    ])
+    def ttest_invalid_method_field(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.FORBIDDEN, code)
+
+
 if __name__ == "__main__":
     unittest.main()

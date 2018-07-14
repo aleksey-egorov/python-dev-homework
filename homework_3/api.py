@@ -135,7 +135,7 @@ class EmailField(CharField):
 
     def set(self, value):
         super().set(value)
-        if not value == self.null_value and not '@' in value:
+        if not value == self.null_value  and not value == None and not '@' in value:
             self.errors.append(FIELD_EMAIL_ERROR)
             self.set_null()
 
@@ -144,7 +144,7 @@ class PhoneField(Field):
 
     def set(self, value):
         super().set(value)
-        if not value == self.null_value and not re.match(phone_pattern, str(value)):
+        if not value == self.null_value and not value == None and not re.match(phone_pattern, str(value)):
             self.errors.append(FIELD_PHONE_ERROR)
             self.set_null()
 
@@ -153,7 +153,7 @@ class DateField(Field):
 
     def set(self, value):
         super().set(value)
-        if not value == self.null_value:
+        if not value == self.null_value and not value == None:
             try:
                 datetime.datetime.strptime(value, '%d.%m.%Y')
             except ValueError:
@@ -165,7 +165,7 @@ class BirthDayField(DateField):
 
     def set(self, value):
         super().set(value)
-        if not value == self.null_value:
+        if not value == self.null_value and not value == None:
             try:
                 bdate = datetime.datetime.strptime(value, '%d.%m.%Y')
                 if datetime.datetime.now().year - bdate.year > 70:
@@ -179,7 +179,7 @@ class GenderField(Field):
 
     def set(self, value):
         super().set(value)
-        if not value == self.null_value and value not in GENDERS:
+        if not value == self.null_value and not value == None and value not in GENDERS:
             self.errors.append(FIELD_GENDER_ERROR)
             self.set_null()
 
@@ -193,12 +193,13 @@ class ClientIDsField(Field):
 
     def set(self, value):
         super().set(value)
-        if not isinstance(value, list):
-            self.errors.append(FIELD_LIST_ERROR)
-            self.set_null()
-        if not all(isinstance(v, int) and v >= 0 for v in value):
-            self.errors.append(FIELD_IDS_ERROR)
-            self.set_null()
+        if not value == None:
+            if not isinstance(value, list):
+                self.errors.append(FIELD_LIST_ERROR)
+                self.set_null()
+            if not all(isinstance(v, int) and v >= 0 for v in value):
+                self.errors.append(FIELD_IDS_ERROR)
+                self.set_null()
 
 
 class RequestMetaclass(type):
@@ -246,7 +247,7 @@ class Request(metaclass=RequestMetaclass):
                 errors += 1
                 for err in field.errors:
                     logging.error("Field '{}' error: {}".format(key, FIELD_REQUEST_ERRORS[err]))
-            if not field.value == field.null_value:
+            if not field.value == None:
                 self.valid_fields.append(key)
 
     @property
