@@ -112,7 +112,7 @@ class CharField(Field):
 
     def set(self, value):
         super().set(value)
-        if not value == self.null_value and not isinstance(value, str):
+        if not value == self.null_value and not value == None and not isinstance(value, str):
             self.errors.append(FIELD_CHAR_ERROR)
             self.set_null()
 
@@ -237,7 +237,7 @@ class Request(metaclass=RequestMetaclass):
             if key in arguments:
                 field.set(arguments[key])
             else:
-                field.set(field.null_value)
+                field.set(None)
 
     def check_arguments(self):
         errors = 0
@@ -265,6 +265,19 @@ class Request(metaclass=RequestMetaclass):
         if field_err == 0 and rh_field_err == 0:
             return True
         return False
+
+    def get_errors_message(self, global_error_id):
+        msg = ERRORS[global_error_id] + " : "
+        for key, field in self.fields:
+            for error in field.errors:
+                msg += "Field '{}' error '{}'. ".format(field._name, FIELD_REQUEST_ERRORS[error])
+
+        if self.request_handler:
+            for key, field in self.request_handler.fields:
+                for error in field.errors:
+                    msg += "Argument '{}' error '{}'. ".format(field._name, FIELD_REQUEST_ERRORS[error])
+
+        return msg
 
 
 class ClientsInterestsRequest(Request):
@@ -314,8 +327,12 @@ class OnlineScoreRequest(Request):
         if is_admin:
             score = 42
         else:
-            score = get_score(store, self.phone.value, self.email.value, self.birthday.value, self.gender.value,
-                              self.first_name.value, self.last_name.value)
+            try:
+                score = get_score(store, self.phone.value, self.email.value, self.birthday.value, self.gender.value,
+                                self.first_name.value, self.last_name.value)
+            except:
+                return {"message" :  self.get_errors_message(INTERNAL_ERROR)}, INTERNAL_ERROR
+
         return {"score": score}, OK
 
     def update_context(self, ctx):
@@ -389,19 +406,6 @@ class MethodRequest(Request):
         else:
             logging.error(REQUEST_AUTH_ERROR)
             self.errors.append(REQUEST_AUTH_ERROR)
-
-    def get_errors_message(self, global_error_id):
-        msg = ERRORS[global_error_id] + " : "
-        for key, field in self.fields:
-            for error in field.errors:
-                msg += "Field '{}' error '{}'. ".format(field._name, FIELD_REQUEST_ERRORS[error])
-
-        if self.request_handler:
-            for key, field in self.request_handler.fields:
-                for error in field.errors:
-                    msg += "Argument '{}' error '{}'. ".format(field._name, FIELD_REQUEST_ERRORS[error])
-
-        return msg
 
 
 def method_handler(request, ctx, store):
