@@ -7,8 +7,11 @@ import datetime
 def get_score(store, phone, email, birthday=None, gender=None, first_name=None, last_name=None):
 
     def convert_birthday(birthday):
-        dt = datetime.datetime.strptime(birthday, '%d.%m.%Y')
-        return dt.strftime("%Y%m%d")
+        try:
+            dt = datetime.datetime.strptime(birthday, '%d.%m.%Y')
+            return dt.strftime("%Y%m%d")
+        except:
+            return ""
 
     key_parts = [
         first_name or "",

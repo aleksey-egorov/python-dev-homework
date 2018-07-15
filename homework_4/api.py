@@ -52,6 +52,7 @@ FIELD_BIRTHDAY_ERROR = 8
 FIELD_LIST_ERROR = 9
 FIELD_IDS_ERROR = 10
 FIELD_ARG_ERROR = 11
+FIELD_NUMERIC_ERROR = 15
 
 REQUEST_BAD_HANDLER_ERROR = 12
 REQUEST_ARG_ERROR = 13
@@ -63,12 +64,13 @@ FIELD_REQUEST_ERRORS = {
     FIELD_CHAR_ERROR: "This field should be a string",
     FIELD_EMAIL_ERROR: "This field should contain '@'",
     FIELD_PHONE_ERROR: "This field should be 7XXXXXXXXXX",
-    FIELD_GENDER_ERROR: "This field should be numeric [0,1,2]",
+    FIELD_GENDER_ERROR: "This field should be numeric: 0,1,2",
     FIELD_DATE_ERROR: "This field should be in format 'DD.MM.YYYY'",
     FIELD_BIRTHDAY_ERROR: "This field should be in format 'DD.MM.YYYY', not earlier than 70 years from current date",
     FIELD_LIST_ERROR: "This field should be a list",
     FIELD_IDS_ERROR: "This field should contain only positive numbers",
     FIELD_ARG_ERROR: "This field should be a dict",
+    FIELD_NUMERIC_ERROR: "This field should be numeric",
 
     REQUEST_BAD_HANDLER_ERROR : "No method specified",
     REQUEST_ARG_ERROR : "Arguments should contain at least one pair of not-null values: phone/email, first_name/last_name, birthday/gender",
@@ -135,9 +137,10 @@ class EmailField(CharField):
 
     def set(self, value):
         super().set(value)
-        if not value == self.null_value  and not value == None and not '@' in value:
-            self.errors.append(FIELD_EMAIL_ERROR)
-            self.set_null()
+        if not value == self.null_value and not value == None and isinstance(value, str):
+            if not '@' in value:
+                self.errors.append(FIELD_EMAIL_ERROR)
+                self.set_null()
 
 
 class PhoneField(Field):
@@ -153,10 +156,11 @@ class DateField(Field):
 
     def set(self, value):
         super().set(value)
+        print ("SET: {} ERR: {}".format(value, self.errors))
         if not value == self.null_value and not value == None:
             try:
                 datetime.datetime.strptime(value, '%d.%m.%Y')
-            except ValueError:
+            except:
                 self.errors.append(FIELD_DATE_ERROR)
                 self.set_null()
 
@@ -179,9 +183,14 @@ class GenderField(Field):
 
     def set(self, value):
         super().set(value)
-        if not value == self.null_value and not value == None and value not in GENDERS:
-            self.errors.append(FIELD_GENDER_ERROR)
-            self.set_null()
+        if not value == self.null_value and not value == None:
+            if isinstance(value, int):
+                if value not in GENDERS:
+                    self.errors.append(FIELD_GENDER_ERROR)
+                    self.set_null()
+            else:
+                self.errors.append(FIELD_NUMERIC_ERROR)
+                self.set_null()
 
 
 class ClientIDsField(Field):
@@ -269,6 +278,9 @@ class Request(metaclass=RequestMetaclass):
 
     def get_errors_message(self, global_error_id):
         msg = ERRORS[global_error_id] + " : "
+        for error in self.errors:
+            msg += "Request error '{}'. ".format(FIELD_REQUEST_ERRORS[error])
+
         for key, field in self.fields:
             for error in field.errors:
                 msg += "Field '{}' error '{}'. ".format(field._name, FIELD_REQUEST_ERRORS[error])

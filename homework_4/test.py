@@ -93,6 +93,7 @@ class TestSuite(unittest.TestCase):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.FORBIDDEN, code)
+        self.assertRegex(response.get("message"), api.ERRORS[api.FORBIDDEN])
 
 
     ## Login field tests
@@ -135,6 +136,7 @@ class TestSuite(unittest.TestCase):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.FORBIDDEN, code)
+        self.assertRegex(response.get("message"), api.ERRORS[api.FORBIDDEN])
 
 
     ## Method field tests
@@ -158,10 +160,6 @@ class TestSuite(unittest.TestCase):
         {"account": "admin", "login": "fyt54e",
          "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
                        "first_name": "Ivan", "last_name": "Petrov"}},
-        {"account": "ivan", "login": "85uyg",
-         "method": "",
-         "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
-                       "first_name": "Ivan", "last_name": "Petrov"}},
         {"account": "ivan", "login": "87687t8g",
          "method": "unknown",
          "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
@@ -171,6 +169,20 @@ class TestSuite(unittest.TestCase):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.INVALID_REQUEST, code)
+        self.assertRegex(response.get("message"), api.FIELD_REQUEST_ERRORS[api.REQUEST_BAD_HANDLER_ERROR])
+
+
+    @cases([
+        {"account": "ivan", "login": "85uyg",
+         "method": "",
+         "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+    ])
+    def test_null_method_field(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.INVALID_REQUEST, code)
+        self.assertRegex(response.get("message"), api.FIELD_REQUEST_ERRORS[api.FIELD_NULLABLE_ERROR])
 
 
     ## Token field tests
@@ -209,6 +221,361 @@ class TestSuite(unittest.TestCase):
     def test_invalid_token_field(self, request):
         response, code = self.get_response(request)
         self.assertEqual(api.FORBIDDEN, code)
+        self.assertRegex(response.get("message"), api.ERRORS[api.FORBIDDEN])
+
+
+
+    ## Phone field tests
+
+    @cases([
+         {"login": "ivan",
+          "method": "online_score",
+          "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+         {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": 70000000000, "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+         {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+    ])
+    def test_ok_phone_field(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.OK, code)
+
+
+    @cases([
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "81112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "7111222334", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": 81112223344, "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": ["71112223344"], "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": {}, "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+    ])
+    def test_invalid_phone_field(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.INVALID_REQUEST, code)
+        self.assertRegex(response.get("message"), api.FIELD_REQUEST_ERRORS[api.FIELD_PHONE_ERROR])
+
+
+    ## Email field tests
+
+    @cases([
+         {"login": "ivan",
+          "method": "online_score",
+          "arguments": {"phone": "71112223344", "email": "123@3.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+         {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "70000000000", "email": "123@", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+         {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "70000000000", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "70000000000", "email": "", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "70000000000", "email": "@123.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+    ])
+    def test_ok_email_field(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.OK, code)
+
+
+    @cases([
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "71112223344", "email": "1233.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+
+    ])
+    def test_invalid_email_field(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.INVALID_REQUEST, code)
+        self.assertRegex(response.get("message"), api.FIELD_REQUEST_ERRORS[api.FIELD_EMAIL_ERROR])
+
+
+    @cases([
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "70000000000", "email": 123, "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "70000000000", "email": [], "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "70000000000", "email": {}, "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+    ])
+    def test_str_email_field(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.INVALID_REQUEST, code)
+        self.assertRegex(response.get("message"), api.FIELD_REQUEST_ERRORS[api.FIELD_CHAR_ERROR])
+
+
+
+    ## Gender field tests
+
+    @cases([
+         {"login": "ivan",
+          "method": "online_score",
+          "arguments": {"phone": "71112223344", "email": "123@3.ru", "gender": 0, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+         {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "70000000000", "email": "123@3.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+         {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "70000000000", "email": "123@3.ru", "gender": 2, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+         {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "70000000000", "email": "@123.ru", "gender": "", "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "70000000000", "email": "@123.ru", "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+    ])
+    def test_ok_gender_field(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.OK, code)
+
+
+    @cases([
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "71112223344", "email": "1233@3.ru", "gender": "1", "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "71112223344", "email": "1233@3.ru", "gender": [1,2], "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "71112223344", "email": "1233@3.ru", "gender": {}, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+
+    ])
+    def test_invalid_gender_field(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.INVALID_REQUEST, code)
+        self.assertRegex(response.get("message"), api.FIELD_REQUEST_ERRORS[api.FIELD_NUMERIC_ERROR])
+
+
+    @cases([
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "71112223344", "email": "1233@3.ru", "gender": 3, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "71112223344", "email": "1233@3.ru", "gender": -1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+
+    ])
+    def test_wrong_gender_field(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.INVALID_REQUEST, code)
+        self.assertRegex(response.get("message"), api.FIELD_REQUEST_ERRORS[api.FIELD_GENDER_ERROR])
+
+
+    ## Birthday field tests
+
+    @cases([
+         {"login": "ivan",
+          "method": "online_score",
+          "arguments": {"phone": "71112223344", "email": "123@3.ru", "gender": 0, "birthday": "01.01.1966",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+         {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "70000000000", "email": "123@3.ru", "gender": 1, "birthday": "01.03.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+         {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "70000000000", "email": "123@3.ru", "gender": 2, "birthday": "12.12.1950",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "70000000000", "email": "123@3.ru", "gender": 2, "birthday": "",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+
+    ])
+    def test_ok_birthday_field(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        print ("RES=", response)
+        self.assertEqual(api.OK, code)
+
+
+    @cases([
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "71112223344", "email": "1233@3.ru", "gender": 1, "birthday": 11012000,
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "71112223344", "email": "1233@3.ru", "gender": 1, "birthday": "01/01/2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "71112223344", "email": "1233@3.ru", "gender": 1, "birthday": "2000.01.03",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+
+    ])
+    def test_invalid_birthday_field(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.INVALID_REQUEST, code)
+        self.assertRegex(response.get("message"), api.FIELD_REQUEST_ERRORS[api.FIELD_DATE_ERROR])
+
+
+    @cases([
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "71112223344", "email": "1233@3.ru", "gender": 1, "birthday": "01.01.1900",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "71112223344", "email": "1233@3.ru", "gender": 1, "birthday": "11.11.1920",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+
+    ])
+    def test_wrong_birthday_field(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.INVALID_REQUEST, code)
+        self.assertRegex(response.get("message"), api.FIELD_REQUEST_ERRORS[api.FIELD_BIRTHDAY_ERROR])
+
+
+    ## First name field tests
+
+    @cases([
+         {"login": "ivan",
+          "method": "online_score",
+          "arguments": {"phone": "71112223344", "email": "123@3.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+         {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "70000000000", "email": "123@3.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan2 test", "last_name": "Petrov"}},
+         {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "70000000000", "email": "123@3.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "", "last_name": "Petrov"}},
+         {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "70000000000", "email": "123@3.ru", "gender": 1, "birthday": "01.01.2000",
+                        "last_name": "Petrov"}},
+    ])
+    def test_ok_firstname_field(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.OK, code)
+
+
+    @cases([
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "71112223344", "email": "1233@.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": 123, "last_name": "Petrov"}},
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "71112223344", "email": "1233@.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": [], "last_name": "Petrov"}},
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "71112223344", "email": "1233@.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": {}, "last_name": "Petrov"}},
+    ])
+    def test_invalid_firstname_field(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.INVALID_REQUEST, code)
+        self.assertRegex(response.get("message"), api.FIELD_REQUEST_ERRORS[api.FIELD_CHAR_ERROR])
+
+
+    ## Last name field tests
+
+    @cases([
+         {"login": "ivan",
+          "method": "online_score",
+          "arguments": {"phone": "71112223344", "email": "123@3.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+         {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "70000000000", "email": "123@3.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov2 test"}},
+         {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "70000000000", "email": "123@3.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": ""}},
+         {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "70000000000", "email": "123@3.ru", "gender": 1, "birthday": "01.01.2000",
+                        "first_name": "Ivan"}},
+    ])
+    def test_ok_lastname_field(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.OK, code)
+
+
+    @cases([
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "71112223344", "email": "1233@.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": 1234}},
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "71112223344", "email": "1233@.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": []}},
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "71112223344", "email": "1233@.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": {}}},
+    ])
+    def test_invalid_lastname_field(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.INVALID_REQUEST, code)
+        self.assertRegex(response.get("message"), api.FIELD_REQUEST_ERRORS[api.FIELD_CHAR_ERROR])
 
 
 
