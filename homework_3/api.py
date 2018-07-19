@@ -7,81 +7,19 @@ import json
 import datetime
 import logging
 import hashlib
-import random
 import uuid
 from optparse import OptionParser
 from http.server import HTTPServer, BaseHTTPRequestHandler
+
+from constants import *
 from scoring import get_score
 from scoring import get_interests
 
-
-SALT = "Otus"
-ADMIN_LOGIN = "admin"
-ADMIN_SALT = "42"
-OK = 200
-BAD_REQUEST = 400
-FORBIDDEN = 403
-NOT_FOUND = 404
-INVALID_REQUEST = 422
-INTERNAL_ERROR = 500
-ERRORS = {
-    BAD_REQUEST: "Bad Request",
-    FORBIDDEN: "Forbidden",
-    NOT_FOUND: "Not Found",
-    INVALID_REQUEST: "Invalid Request",
-    INTERNAL_ERROR: "Internal Server Error",
-}
-UNKNOWN = 0
-MALE = 1
-FEMALE = 2
-GENDERS = {
-    UNKNOWN: "unknown",
-    MALE: "male",
-    FEMALE: "female",
-}
-
-
-FIELD_NULLABLE_ERROR = 1
-FIELD_REQUIRED_ERROR = 2
-FIELD_CHAR_ERROR = 3
-FIELD_EMAIL_ERROR = 4
-FIELD_PHONE_ERROR = 5
-FIELD_GENDER_ERROR = 6
-FIELD_DATE_ERROR = 7
-FIELD_BIRTHDAY_ERROR = 8
-FIELD_LIST_ERROR = 9
-FIELD_IDS_ERROR = 10
-FIELD_ARG_ERROR = 11
-FIELD_NUMERIC_ERROR = 15
-
-REQUEST_BAD_HANDLER_ERROR = 12
-REQUEST_ARG_ERROR = 13
-REQUEST_AUTH_ERROR = 14
-
-FIELD_REQUEST_ERRORS = {
-    FIELD_NULLABLE_ERROR: "This field is not nullable",
-    FIELD_REQUIRED_ERROR: "This field is required",
-    FIELD_CHAR_ERROR: "This field should be a string",
-    FIELD_EMAIL_ERROR: "This field should contain '@'",
-    FIELD_PHONE_ERROR: "This field should be 7XXXXXXXXXX",
-    FIELD_GENDER_ERROR: "This field should be numeric: 0,1,2",
-    FIELD_DATE_ERROR: "This field should be in format 'DD.MM.YYYY'",
-    FIELD_BIRTHDAY_ERROR: "This field should be in format 'DD.MM.YYYY', not earlier than 70 years from current date",
-    FIELD_LIST_ERROR: "This field should be a list",
-    FIELD_IDS_ERROR: "This field should contain only positive numbers",
-    FIELD_ARG_ERROR: "This field should be a dict",
-    FIELD_NUMERIC_ERROR: "This field should be numeric",
-
-    REQUEST_BAD_HANDLER_ERROR : "No method specified",
-    REQUEST_ARG_ERROR : "Arguments should contain at least one pair of not-null values: phone/email, first_name/last_name, birthday/gender",
-    REQUEST_AUTH_ERROR : "User authorization error"
-}
-
-ARGUMENTS_VALID = "Arguments are valid"
-ARGUMENTS_INVALID = "Arguments invalid"
-USER_AUTHORIZED = "User authorized"
-
 phone_pattern = re.compile(r'7(\d{10})')
+
+
+class ValidationError(Exception):
+    pass
 
 
 class Field(object):
@@ -94,13 +32,18 @@ class Field(object):
         self.required = required
         self.nullable = nullable
 
-    def set(self, value):
+    def _valid_error(self, value):
         if not self.nullable and value == self.null_value:
-            self.errors.append(FIELD_NULLABLE_ERROR)
+            return FIELD_NULLABLE_ERROR
         elif self.required and value == None:
-            self.errors.append(FIELD_REQUIRED_ERROR)
-        else:
+            return FIELD_REQUIRED_ERROR
+
+    def set(self, value):
+        err = self._valid_error(value)
+        if err == None:
             self.value = value
+        else:
+            return err
 
     def set_null(self):
         self.value = self.null_value
@@ -109,14 +52,21 @@ class Field(object):
     def is_valid(self):
         return not self.errors
 
+    @property
+    def is_empty(self):
+        return self.value == None or self.value == self.null_value
+
+    def show_error(self):
+        pass
+
 
 class CharField(Field):
 
     def set(self, value):
-        super().set(value)
-        if not value == self.null_value and not value == None and not isinstance(value, str):
-            self.errors.append(FIELD_CHAR_ERROR)
-            self.set_null()
+        err = super().set(value)
+        if err == None and not self.is_empty and not isinstance(value, str):
+            return FIELD_CHAR_ERROR
+        return err
 
 
 class ArgumentsField(Field):
@@ -127,69 +77,68 @@ class ArgumentsField(Field):
        self.null_value = {}
 
     def set(self, value):
-        super().set(value)
-        if not value == self.null_value and not isinstance(value, dict):
-            self.errors.append(FIELD_ARG_ERROR)
-            self.set_null()
+        err = super().set(value)
+        if err == None and not self.is_empty and not isinstance(value, dict):
+            return FIELD_ARG_ERROR
+        return err
 
 
 class EmailField(CharField):
 
     def set(self, value):
-        super().set(value)
-        if not value == self.null_value and not value == None and isinstance(value, str):
+        err = super().set(value)
+        if err == None and not self.is_empty and isinstance(value, str):
             if not '@' in value:
-                self.errors.append(FIELD_EMAIL_ERROR)
-                self.set_null()
+                return FIELD_EMAIL_ERROR
+        return err
 
 
 class PhoneField(Field):
 
     def set(self, value):
-        super().set(value)
-        if not value == self.null_value and not value == None and not re.match(phone_pattern, str(value)):
-            self.errors.append(FIELD_PHONE_ERROR)
-            self.set_null()
+        err = super().set(value)
+        if err == None and not self.is_empty and not re.match(phone_pattern, str(value)):
+            return FIELD_PHONE_ERROR
+        return err
 
 
 class DateField(Field):
 
     def set(self, value):
-        super().set(value)
-        if not value == self.null_value and not value == None:
+        err = super().set(value)
+        if err == None and not self.is_empty:
             try:
                 datetime.datetime.strptime(value, '%d.%m.%Y')
             except:
-                self.errors.append(FIELD_DATE_ERROR)
-                self.set_null()
+                return FIELD_DATE_ERROR
+        return err
 
 
 class BirthDayField(DateField):
 
     def set(self, value):
-        super().set(value)
-        if not value == self.null_value and not value == None:
+        err = super().set(value)
+        if err == None and not self.is_empty :
             try:
                 bdate = datetime.datetime.strptime(value, '%d.%m.%Y')
                 if datetime.datetime.now().year - bdate.year > 70:
-                    self.errors.append(FIELD_BIRTHDAY_ERROR)
-                    self.set_null()
+                    return FIELD_BIRTHDAY_ERROR
             except:
                 pass
+        return err
 
 
 class GenderField(Field):
 
     def set(self, value):
-        super().set(value)
-        if not value == self.null_value and not value == None:
+        err = super().set(value)
+        if err == None and not self.is_empty:
             if isinstance(value, int):
                 if value not in GENDERS:
-                    self.errors.append(FIELD_GENDER_ERROR)
-                    self.set_null()
+                    return FIELD_GENDER_ERROR
             else:
-                self.errors.append(FIELD_NUMERIC_ERROR)
-                self.set_null()
+                return FIELD_NUMERIC_ERROR
+        return err
 
 
 class ClientIDsField(Field):
@@ -200,14 +149,14 @@ class ClientIDsField(Field):
         self.null_value = []
 
     def set(self, value):
-        super().set(value)
-        if not value == None:
+        err = super().set(value)
+        print ("cliid=", err)
+        if err == None and not self.is_empty:
             if not isinstance(value, list):
-                self.errors.append(FIELD_LIST_ERROR)
-                self.set_null()
+                return FIELD_LIST_ERROR
             if not all(isinstance(v, int) and v >= 0 for v in value):
-                self.errors.append(FIELD_IDS_ERROR)
-                self.set_null()
+                return FIELD_IDS_ERROR
+        return err
 
 
 class RequestMetaclass(type):
@@ -242,11 +191,16 @@ class Request(metaclass=RequestMetaclass):
             self.set_values(kwargs)
 
     def set_values(self, arguments):
+        field_errors = {}
         for key, field in self.fields:
             if key in arguments:
-                field.set(arguments[key])
+                value = arguments[key]
             else:
-                field.set(None)
+                value = None
+            field_error = field.set(value)
+            if not field_error == None:
+                field_errors[key] = field_error
+        return field_errors
 
     def check_arguments(self):
         errors = 0
@@ -288,6 +242,20 @@ class Request(metaclass=RequestMetaclass):
             for key, field in self.request_handler.fields:
                 for error in field.errors:
                     msg += "Argument '{}' error '{}'. ".format(field._name, FIELD_REQUEST_ERRORS[error])
+
+        return msg
+
+    def err_msg(self, global_error_id, field_errors):
+        msg = ERRORS[global_error_id] + " : "
+        #for error in self.errors:
+        #    msg += "Request error '{}'. ".format(FIELD_REQUEST_ERRORS[error])
+        for key in field_errors:
+            msg += "Field '{}' error '{}'. ".format(key, FIELD_REQUEST_ERRORS[field_errors[key]])
+
+        #if self.request_handler:
+        #    for key, field in self.request_handler.fields:
+        #        for error in field.errors:
+        #            msg += "Argument '{}' error '{}'. ".format(field._name, FIELD_REQUEST_ERRORS[error])
 
         return msg
 
@@ -359,47 +327,9 @@ class MethodRequest(Request):
     arguments = ArgumentsField(required=True, nullable=True)
     method= CharField(required=True, nullable=False)
 
-    def process_request(self, ctx, store):
-        handlers = {
-            "clients_interests": ClientsInterestsRequest,
-            "online_score": OnlineScoreRequest,
-        }
-
-        try:
-            args = self.arguments.value
-            self.request_handler = handlers[self.method.value](False, **args)
-        except KeyError:
-            self.errors.append(REQUEST_BAD_HANDLER_ERROR)
-
-        if self.request_handler:
-            self.request_handler.set_values(self.arguments.value)
-            self.request_handler.check_arguments()
-            self.request_handler.update_context(ctx)
-
-        self.check_arguments()
-        self.check_auth()
-
-        if not self.is_good_request:
-            return {"message": self.get_errors_message(INVALID_REQUEST)}, INVALID_REQUEST
-        if not self.is_authorized:
-            return {"message": self.get_errors_message(FORBIDDEN)}, FORBIDDEN
-        if not self.is_valid:
-            return {"message": self.get_errors_message(INVALID_REQUEST)}, INVALID_REQUEST
-
-        return self.request_handler.get_result(self.is_admin, store)
-
-
     @property
     def is_admin(self):
         return self.login.value == ADMIN_LOGIN
-
-    @property
-    def is_authorized(self):
-        return not REQUEST_AUTH_ERROR in self.errors
-
-    @property
-    def is_good_request(self):
-        return not REQUEST_BAD_HANDLER_ERROR in self.errors
 
     def check_auth(self):
         if self.is_admin:
@@ -415,15 +345,44 @@ class MethodRequest(Request):
 
         if digest == self.token.value:
             logging.info(USER_AUTHORIZED)
+            return True
         else:
             logging.error(FIELD_REQUEST_ERRORS[REQUEST_AUTH_ERROR])
-            self.errors.append(REQUEST_AUTH_ERROR)
+            return False
 
 
 def method_handler(request, ctx, store):
-    method_request = MethodRequest(True, **request['body'])
-    response, code = method_request.process_request(ctx, store)
-    return response, code
+    method = MethodRequest(True, **request['body'])
+
+    handlers = {
+        "clients_interests": ClientsInterestsRequest,
+        "online_score": OnlineScoreRequest,
+    }
+
+    try:
+        args = method.arguments.value
+        method.request_handler = handlers[method.method.value](False, **args)
+
+        if method.request_handler:
+            field_errors = method.request_handler.set_values(method.arguments.value)
+            if not field_errors == {}:
+                return {"message": method.get_errors_message(INVALID_REQUEST)}, INVALID_REQUEST
+            method.request_handler.check_arguments()
+            method.request_handler.update_context(ctx)
+
+        method.check_arguments()
+
+        if not method.check_auth():
+            return {"message": method.err_msg(FORBIDDEN, {'token': REQUEST_AUTH_ERROR})}, FORBIDDEN
+        if not method.is_valid:
+            return {"message": method.get_errors_message(INVALID_REQUEST)}, INVALID_REQUEST
+        if method.arguments.value == {}:
+            return {"message": method.err_msg(INVALID_REQUEST, {'arguments': REQUEST_EMPTY_ARGS_ERROR})}, INVALID_REQUEST
+
+        return method.request_handler.get_result(method.is_admin, store)
+
+    except:
+        return {"message": method.err_msg(INVALID_REQUEST, {'method': REQUEST_BAD_HANDLER_ERROR})}, INVALID_REQUEST
 
 
 class MainHTTPHandler(BaseHTTPRequestHandler):
