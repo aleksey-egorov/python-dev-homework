@@ -170,10 +170,13 @@ class Request(metaclass=RequestMetaclass):
                 value = None
             field.set(value)
 
-    def err_msg(self, global_error_id, field_errors):
-        msg = ERRORS[global_error_id] + " : "
-        for key in field_errors:
-            msg += "Field '{}' error: {}".format(key, FIELD_REQUEST_ERRORS[field_errors[key]])
+    def err_msg(self, global_error_id, error):
+        msg = ERRORS[global_error_id]
+        if isinstance(error, tuple):
+            try:
+                msg += ": {} error - {}".format(error[0], FIELD_REQUEST_ERRORS[error[1]])
+            except:
+                pass
         return msg
 
 
@@ -248,8 +251,8 @@ class MethodRequest(Request):
         if self.is_admin:
             digest = hashlib.sha512((datetime.datetime.now().strftime("%Y%m%d%H") + ADMIN_SALT).encode('utf-8')).hexdigest()
         else:
-            ac = self.account.value
-            lo = self.login.value
+            ac = self.account.value or ""
+            lo = self.login.value or ""
             digest = hashlib.sha512((ac + lo + SALT).encode('utf-8')).hexdigest()
 
         if digest == self.token.value:
@@ -262,8 +265,8 @@ def method_handler(request, ctx, store):
     method = MethodRequest(**request['body'])
     try:
         method.set_values(request['body'])
-    except:
-        return {"message": method.err_msg(INVALID_REQUEST, {})}, INVALID_REQUEST
+    except Exception as error:
+        return {"message": method.err_msg(INVALID_REQUEST, error.args)}, INVALID_REQUEST
 
     handlers = {
         "clients_interests": ClientsInterestsRequest,
@@ -274,19 +277,20 @@ def method_handler(request, ctx, store):
         args = method.arguments.value
         method.request_handler = handlers[method.method.value](**args)
     except:
-        return {"message": method.err_msg(INVALID_REQUEST, {'method': REQUEST_BAD_HANDLER_ERROR})}, INVALID_REQUEST
+        return {"message": method.err_msg(INVALID_REQUEST, ('method', REQUEST_BAD_HANDLER_ERROR))}, INVALID_REQUEST
 
     try:
         method.check_auth()
     except Exception as error:
-        return {"message": method.err_msg(FORBIDDEN, {error.args[0]: error.args[1]})}, FORBIDDEN
+        print ("ER=", error.args)
+        return {"message": method.err_msg(FORBIDDEN, error.args)}, FORBIDDEN
 
     if method.request_handler:
         try:
             method.request_handler.set_values(method.arguments.value)
             method.request_handler.check_arguments()
         except Exception as error:
-            return {"message": method.err_msg(INVALID_REQUEST, {error.args[0]: error.args[1]})}, INVALID_REQUEST
+            return {"message": method.err_msg(INVALID_REQUEST, error.args)}, INVALID_REQUEST
 
         method.request_handler.update_context(ctx)
 

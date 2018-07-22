@@ -92,8 +92,8 @@ class TestSuite(unittest.TestCase):
     def test_invalid_account_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
-        self.assertEqual(api.FORBIDDEN, code)
-        self.assertRegex(response.get("message"), api.ERRORS[api.FORBIDDEN])
+        self.assertEqual(api.INVALID_REQUEST, code)
+        self.assertRegex(response.get("message"), api.ERRORS[api.INVALID_REQUEST])
 
 
     ## Login field tests
@@ -135,8 +135,9 @@ class TestSuite(unittest.TestCase):
     def test_invalid_login_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
-        self.assertEqual(api.FORBIDDEN, code)
-        self.assertRegex(response.get("message"), api.ERRORS[api.FORBIDDEN])
+        self.assertEqual(api.INVALID_REQUEST, code)
+        self.assertRegex(response.get("message"), api.ERRORS[api.INVALID_REQUEST])
+        self.assertRegex(response.get("message"), 'login')
 
 
     ## Method field tests
@@ -157,9 +158,7 @@ class TestSuite(unittest.TestCase):
 
 
     @cases([
-        {"account": "admin", "login": "fyt54e",
-         "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
-                       "first_name": "Ivan", "last_name": "Petrov"}},
+
         {"account": "ivan", "login": "87687t8g",
          "method": "unknown",
          "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
@@ -185,6 +184,18 @@ class TestSuite(unittest.TestCase):
         self.assertRegex(response.get("message"), api.FIELD_REQUEST_ERRORS[api.FIELD_NULLABLE_ERROR])
 
 
+    @cases([
+        {"account": "admin", "login": "fyt54e",
+         "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+    ])
+    def test_no_method_field(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.INVALID_REQUEST, code)
+        self.assertRegex(response.get("message"), api.FIELD_REQUEST_ERRORS[api.FIELD_REQUIRED_ERROR])
+
+
     ## Token field tests
 
     @cases([
@@ -204,25 +215,33 @@ class TestSuite(unittest.TestCase):
 
 
     @cases([
-        {"login": "ivan",
-         "method": "online_score",
-         "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
-                       "first_name": "Ivan", "last_name": "Petrov"}},
+        {"account": "ivan", "login": "ivan1",
+         "token": "05158f6c9a8ae9698e1ba6f56",
+         "method": "clients_interests",
+         "arguments": {"client_ids": [6, 7], "date": "20.07.2017"}},
         {"login": "ivan",
          "method": "online_score",
          "token": "",
          "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
                        "first_name": "Ivan", "last_name": "Petrov"}},
-        {"account": "ivan", "login": "ivan1",
-         "token": "05158f6c9a8ae9698e1ba6f56",
-         "method": "clients_interests",
-         "arguments": {"client_ids": [6, 7], "date": "20.07.2017"}},
     ])
     def test_invalid_token_field(self, request):
         response, code = self.get_response(request)
         self.assertEqual(api.FORBIDDEN, code)
         self.assertRegex(response.get("message"), api.ERRORS[api.FORBIDDEN])
 
+
+    @cases([
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+
+    ])
+    def test_null_token_field(self, request):
+        response, code = self.get_response(request)
+        self.assertEqual(api.INVALID_REQUEST, code)
+        self.assertRegex(response.get("message"), api.ERRORS[api.INVALID_REQUEST])
 
 
     ## Phone field tests
@@ -577,6 +596,161 @@ class TestSuite(unittest.TestCase):
         self.assertEqual(api.INVALID_REQUEST, code)
         self.assertRegex(response.get("message"), api.FIELD_REQUEST_ERRORS[api.FIELD_CHAR_ERROR])
 
+
+   ## Client ID field tests
+
+    @cases([
+         {"login": "ivan",
+          "method": "clients_interests",
+          "arguments": {"client_ids": [1]}},
+        {"login": "ivan",
+         "method": "clients_interests",
+         "arguments": {"client_ids": [1]}},
+        {"login": "ivan",
+         "method": "clients_interests",
+         "arguments": {"client_ids": [1]}},
+        {"login": "ivan",
+         "method": "clients_interests",
+         "arguments": {"client_ids": [1]}},
+    ])
+    def test_ok_client_ids_field(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.OK, code)
+
+
+    @cases([
+        {"login": "ivan",
+         "method": "clients_interests",
+         "arguments": {"client_ids": -5}},
+        {"login": "ivan",
+         "method": "clients_interests",
+         "arguments": {"client_ids": 7}},
+        {"login": "ivan",
+         "method": "clients_interests",
+         "arguments": {"client_ids": "7"}},
+        {"login": "ivan",
+         "method": "clients_interests",
+         "arguments": {"client_ids": ""}},
+        {"login": "ivan",
+         "method": "clients_interests",
+         "arguments": {"client_ids": {'id':'6'}}},
+    ])
+    def test_invalid_client_ids_field(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.INVALID_REQUEST, code)
+        self.assertRegex(response.get("message"), api.FIELD_REQUEST_ERRORS[api.FIELD_LIST_ERROR])
+
+
+    @cases([
+        {"login": "ivan",
+         "method": "clients_interests",
+         "arguments": {"client_ids": []}},
+    ])
+    def test_null_client_ids_field(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.INVALID_REQUEST, code)
+        self.assertRegex(response.get("message"), api.FIELD_REQUEST_ERRORS[api.FIELD_NULLABLE_ERROR])
+
+
+    @cases([
+        {"login": "ivan",
+         "method": "clients_interests",
+         "arguments": {"client_ids": [-4,7]}},
+        {"login": "ivan",
+         "method": "clients_interests",
+         "arguments": {"client_ids": [7, -1, 2]}},
+    ])
+    def test_negative_client_ids_field(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.INVALID_REQUEST, code)
+        self.assertRegex(response.get("message"), api.FIELD_REQUEST_ERRORS[api.FIELD_IDS_ERROR])
+
+
+    ## Date field tests
+
+    @cases([
+        {"login": "ivan",
+         "method": "clients_interests",
+         "arguments": {"client_ids": [4, 7], "date": "08.07.2017"}},
+        {"login": "ivan",
+         "method": "clients_interests",
+         "arguments": {"client_ids": [4, 7], "date": ""}},
+
+    ])
+    def test_ok_interests_date_field(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.OK, code)
+
+
+    @cases([
+        {"login": "ivan",
+         "method": "clients_interests",
+         "arguments": {"client_ids": [4, 7], "date": 18072017}},
+        {"login": "ivan",
+         "method": "clients_interests",
+         "arguments": {"client_ids": [4, 7], "date": "18-07-2017"}},
+        {"login": "ivan",
+         "method": "clients_interests",
+         "arguments": {"client_ids": [4, 7], "date": "08/07/2017"}},
+        {"login": "ivan",
+         "method": "clients_interests",
+         "arguments": {"client_ids": [4, 7], "date": "2008.07.17"}},
+
+    ])
+    def test_invalid_interests_date_field(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.INVALID_REQUEST, code)
+        self.assertRegex(response.get("message"), api.FIELD_REQUEST_ERRORS[api.FIELD_DATE_ERROR])
+
+
+    # Functional tests
+
+    ## Bad auth test
+
+    @cases([
+        {"login": "ivan",
+         "method": "online_score",
+         "token": "fb2e77c45f284600abf73f77024716720fd5a74dd6d738ae4950026b605c34179e19777eb2bd701a75f3f01bc18eeff8fde7d7740852d979213ddcc3d1931265",
+         "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
+        {"account": "ivan", "login": "ivan5",
+         "token": "9ce4596ad0cdd2f2f24d6e6fc534a2f9d6cdfe481e8755558c9dfd349fec4bd6776f44c19ff8f780325c6c38112d811edb5dd2d05158f6c9a8ae9698e1ba6f56",
+         "method": "clients_interests",
+         "arguments": {"client_ids": [6, 7], "date": "20.07.2017"}},
+    ])
+    def test_bad_auth(self, request):
+        response, code = self.get_response(request)
+        self.assertEqual(api.FORBIDDEN, code)
+        self.assertRegex(response.get("message"), api.FIELD_REQUEST_ERRORS[api.REQUEST_AUTH_ERROR])
+
+
+    ## Argument pairs error
+
+    @cases([
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "71112223344", "last_name": "Petrov"}},
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"phone": "71112344444", "gender": 1}},
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"email": "123@3.ru", "birthday": "01.01.2000"}},
+        {"login": "ivan",
+         "method": "online_score",
+         "arguments": {"email": "123@3.ru", "gender": 1}},
+    ])
+    def test_invalid_argument_pairs(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.INVALID_REQUEST, code)
+        self.assertRegex(response.get("message"), api.FIELD_REQUEST_ERRORS[api.REQUEST_ARG_ERROR])
 
 
 
