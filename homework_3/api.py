@@ -19,16 +19,15 @@ phone_pattern = re.compile(r'7(\d{10})')
 
 
 class ValidationError(Exception):
-    def __init__(self, error):
-        logging.error(FIELD_REQUEST_ERRORS[error])
-        print (FIELD_REQUEST_ERRORS[error])
+    def __init__(self, field, error):
+        logging.error("Field '{}' error: {}".format(field, FIELD_REQUEST_ERRORS[error]))
 
 
 class Field(object):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, required=True, nullable=False):
-        self.errors = []
+        self.name = ''
         self.value = None
         self.null_value = ''
         self.required = required
@@ -36,9 +35,9 @@ class Field(object):
 
     def _valid_error(self, value):
         if not self.nullable and value == self.null_value:
-            raise ValidationError(FIELD_NULLABLE_ERROR)
+            raise ValidationError(self.name, FIELD_NULLABLE_ERROR)
         elif self.required and value == None:
-            raise ValidationError(FIELD_REQUIRED_ERROR)
+            raise ValidationError(self.name, FIELD_REQUIRED_ERROR)
 
     def set(self, value):
         self._valid_error(value)
@@ -46,10 +45,6 @@ class Field(object):
 
     def set_null(self):
         self.value = self.null_value
-
-    @property
-    def is_valid(self):
-        return not self.errors
 
     @property
     def is_empty(self):
@@ -61,9 +56,7 @@ class CharField(Field):
     def set(self, value):
         super().set(value)
         if not self.is_empty and not isinstance(value, str):
-            #return FIELD_CHAR_ERROR
-            raise ValidationError(FIELD_CHAR_ERROR)
-        #return err
+            raise ValidationError(self.name, FIELD_CHAR_ERROR)
 
 
 class ArgumentsField(Field):
@@ -76,8 +69,7 @@ class ArgumentsField(Field):
     def set(self, value):
         super().set(value)
         if not self.is_empty and not isinstance(value, dict):
-            raise ValidationError(FIELD_ARG_ERROR)
-        #return err
+            raise ValidationError(self.name, FIELD_ARG_ERROR)
 
 
 class EmailField(CharField):
@@ -86,8 +78,7 @@ class EmailField(CharField):
         super().set(value)
         if not self.is_empty and isinstance(value, str):
             if not '@' in value:
-                raise ValidationError(FIELD_EMAIL_ERROR)
-        #raise ValidationError(err)
+                raise ValidationError(self.name, FIELD_EMAIL_ERROR)
 
 
 class PhoneField(Field):
@@ -95,9 +86,7 @@ class PhoneField(Field):
     def set(self, value):
         super().set(value)
         if not self.is_empty and not re.match(phone_pattern, str(value)):
-            #return FIELD_PHONE_ERROR
-            raise ValidationError(FIELD_PHONE_ERROR)
-        #raise ValidationError(err)
+            raise ValidationError(self.name, FIELD_PHONE_ERROR)
 
 
 class DateField(Field):
@@ -108,8 +97,7 @@ class DateField(Field):
             try:
                 datetime.datetime.strptime(value, '%d.%m.%Y')
             except:
-                raise ValidationError(FIELD_DATE_ERROR)
-        #raise ValidationError(err)
+                raise ValidationError(self.name, FIELD_DATE_ERROR)
 
 
 class BirthDayField(DateField):
@@ -118,7 +106,7 @@ class BirthDayField(DateField):
         super().set(value)
         if not self.is_empty :
             if datetime.datetime.now().year - datetime.datetime.strptime(value, '%d.%m.%Y').year > 70:
-                raise ValidationError(FIELD_BIRTHDAY_ERROR)
+                raise ValidationError(self.name, FIELD_BIRTHDAY_ERROR)
 
 
 class GenderField(Field):
@@ -128,12 +116,9 @@ class GenderField(Field):
         if not self.is_empty:
             if isinstance(value, int):
                 if value not in GENDERS:
-                    #return FIELD_GENDER_ERROR
-                    raise ValidationError(FIELD_GENDER_ERROR)
+                    raise ValidationError(self.name, FIELD_GENDER_ERROR)
             else:
-                #return FIELD_NUMERIC_ERROR
-                raise ValidationError(FIELD_NUMERIC_ERROR)
-        #return err
+                raise ValidationError(self.name, FIELD_NUMERIC_ERROR)
 
 
 class ClientIDsField(Field):
@@ -147,10 +132,9 @@ class ClientIDsField(Field):
         super().set(value)
         if not self.is_empty:
             if not isinstance(value, list):
-                raise ValidationError(FIELD_LIST_ERROR)
+                raise ValidationError(self.name, FIELD_LIST_ERROR)
             if not all(isinstance(v, int) and v >= 0 for v in value):
-                raise ValidationError(FIELD_IDS_ERROR)
-       # return err
+                raise ValidationError(self.name, FIELD_IDS_ERROR)
 
 
 class RequestMetaclass(type):
@@ -160,7 +144,7 @@ class RequestMetaclass(type):
         fields = []
         for field_name, field in attrs.items():
             if isinstance(field, Field):
-                field._name = field_name
+                field.name = field_name
                 fields.append((field_name, field))
         new_class.fields = fields
         return new_class
@@ -169,17 +153,14 @@ class RequestMetaclass(type):
 class Request(metaclass=RequestMetaclass):
 
     def __init__(self, **kwargs):
-        self.errors = []
         self.request_handler = None
         self.fields_list = []
         self.valid_fields = []
 
         for field_name, value in kwargs.items():
-            setattr(self, field_name + '_value', value)
             self.fields_list.append(field_name)
         for key, field in self.fields:
             field.set_null()
-            field.errors = []
 
     def set_values(self, arguments):
         for key, field in self.fields:
@@ -189,34 +170,10 @@ class Request(metaclass=RequestMetaclass):
                 value = None
             field.set(value)
 
-    def get_errors_message(self, global_error_id):
-        msg = ERRORS[global_error_id] + " : "
-        for error in self.errors:
-            msg += "Request error '{}'. ".format(FIELD_REQUEST_ERRORS[error])
-
-        for key, field in self.fields:
-            for error in field.errors:
-                msg += "Field '{}' error '{}'. ".format(field._name, FIELD_REQUEST_ERRORS[error])
-
-        if self.request_handler:
-            for key, field in self.request_handler.fields:
-                for error in field.errors:
-                    msg += "Argument '{}' error '{}'. ".format(field._name, FIELD_REQUEST_ERRORS[error])
-
-        return msg
-
     def err_msg(self, global_error_id, field_errors):
         msg = ERRORS[global_error_id] + " : "
-        #for error in self.errors:
-        #    msg += "Request error '{}'. ".format(FIELD_REQUEST_ERRORS[error])
         for key in field_errors:
-            msg += "Field '{}' error '{}'. ".format(key, FIELD_REQUEST_ERRORS[field_errors[key]])
-
-        #if self.request_handler:
-        #    for key, field in self.request_handler.fields:
-        #        for error in field.errors:
-        #            msg += "Argument '{}' error '{}'. ".format(field._name, FIELD_REQUEST_ERRORS[error])
-
+            msg += "Field '{}' error: {}".format(key, FIELD_REQUEST_ERRORS[field_errors[key]])
         return msg
 
 
@@ -253,10 +210,9 @@ class OnlineScoreRequest(Request):
             if not field.is_empty:
                 self.valid_fields.append(key)
 
-        print('vf=', self.valid_fields)
         field_pairs = [("phone", "email"), ("first_name", "last_name"), ("gender", "birthday")]
         if not any(all(name in self.valid_fields for name in pair) for pair in field_pairs):
-            raise ValidationError(REQUEST_ARG_ERROR)
+            raise ValidationError('arguments', REQUEST_ARG_ERROR)
 
         logging.info(ARGUMENTS_VALID)
 
@@ -268,7 +224,7 @@ class OnlineScoreRequest(Request):
                 score = get_score(store, self.phone.value, self.email.value, self.birthday.value, self.gender.value,
                                 self.first_name.value, self.last_name.value)
             except:
-                return {"message" :  self.get_errors_message(INTERNAL_ERROR)}, INTERNAL_ERROR
+                return {"message" :  self.err_msg(INTERNAL_ERROR, {})}, INTERNAL_ERROR
 
         return {"score": score}, OK
 
@@ -293,19 +249,13 @@ class MethodRequest(Request):
             digest = hashlib.sha512((datetime.datetime.now().strftime("%Y%m%d%H") + ADMIN_SALT).encode('utf-8')).hexdigest()
         else:
             ac = self.account.value
-            if not ac:
-                ac = ''
             lo = self.login.value
-            if not lo:
-                lo = ''
             digest = hashlib.sha512((ac + lo + SALT).encode('utf-8')).hexdigest()
 
         if digest == self.token.value:
             logging.info(USER_AUTHORIZED)
-            return True
         else:
-            logging.error(FIELD_REQUEST_ERRORS[REQUEST_AUTH_ERROR])
-            return False
+            raise ValidationError('token', REQUEST_AUTH_ERROR)
 
 
 def method_handler(request, ctx, store):
@@ -326,31 +276,21 @@ def method_handler(request, ctx, store):
     except:
         return {"message": method.err_msg(INVALID_REQUEST, {'method': REQUEST_BAD_HANDLER_ERROR})}, INVALID_REQUEST
 
-    if not method.check_auth():
-        return {"message": method.err_msg(FORBIDDEN, {'token': REQUEST_AUTH_ERROR})}, FORBIDDEN
+    try:
+        method.check_auth()
+    except Exception as error:
+        return {"message": method.err_msg(FORBIDDEN, {error.args[0]: error.args[1]})}, FORBIDDEN
 
     if method.request_handler:
         try:
             method.request_handler.set_values(method.arguments.value)
-        except:
-            return {"message": 'err' }, INVALID_REQUEST
-
-        try:
-            print ("check")
             method.request_handler.check_arguments()
-        except:
-            return {"message": method.err_msg(INVALID_REQUEST, {'arguments': REQUEST_ARG_ERROR})}, INVALID_REQUEST
+        except Exception as error:
+            return {"message": method.err_msg(INVALID_REQUEST, {error.args[0]: error.args[1]})}, INVALID_REQUEST
 
         method.request_handler.update_context(ctx)
 
-
-
-    # if not method.is_valid:
-    #     return {"message": method.get_errors_message(INVALID_REQUEST)}, INVALID_REQUEST
-
-
     return method.request_handler.get_result(method.is_admin, store)
-
 
 
 class MainHTTPHandler(BaseHTTPRequestHandler):
