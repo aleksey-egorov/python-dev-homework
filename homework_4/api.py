@@ -310,6 +310,7 @@ class MainHTTPHandler(BaseHTTPRequestHandler):
         response, code = {}, OK
         context = {"request_id": self.get_request_id(self.headers)}
         request = None
+        logging.info(self.headers)
         try:
             data_string = self.rfile.read(int(self.headers['Content-Length']))
             request = json.loads(data_string)

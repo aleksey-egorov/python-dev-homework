@@ -1,6 +1,7 @@
 import hashlib
 import json
 import datetime
+import random
 
 
 
@@ -41,5 +42,8 @@ def get_score(store, phone, email, birthday=None, gender=None, first_name=None, 
 
 def get_interests(store, cid):
     #r = store.get("i:%s" % cid)
-    r = {}
-    return json.loads(r) if r else []
+    #r = {}
+    #return json.loads(r) if r else []
+
+    interests = ["cars", "pets", "travel", "hi-tech", "sport", "music", "books", "tv", "cinema", "geek", "otus"]
+    return random.sample(interests, 2)

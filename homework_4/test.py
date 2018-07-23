@@ -2,6 +2,8 @@ import unittest
 import functools
 import hashlib
 import datetime
+import requests
+import json
 
 import api
 
@@ -34,6 +36,20 @@ class TestSuite(unittest.TestCase):
         else:
             msg = str(request.get("account", "")) + str(request.get("login", "")) + api.SALT
             request["token"] = hashlib.sha512(msg.encode('utf-8')).hexdigest()
+
+    def get_http_response(self, request):
+        size = len(str(request))
+        session = requests.Session()
+        headers = {"Content-Type": "application/json",
+                   "Content-Length": str(size)
+                   }
+        req = requests.Request("post", "http://127.0.0.1:8080/method/", json=request, headers=headers)
+        prep = req.prepare()
+        resp = session.send(prep)
+        print ("PRE JSON=", resp.text)
+        response = json.loads(resp.text)
+        return response
+
 
 
     ## Common tests
@@ -724,7 +740,7 @@ class TestSuite(unittest.TestCase):
          "method": "clients_interests",
          "arguments": {"client_ids": [6, 7], "date": "20.07.2017"}},
     ])
-    def test_bad_auth(self, request):
+    def test_func_bad_auth(self, request):
         response, code = self.get_response(request)
         self.assertEqual(api.FORBIDDEN, code)
         self.assertRegex(response.get("message"), api.FIELD_REQUEST_ERRORS[api.REQUEST_AUTH_ERROR])
@@ -746,12 +762,106 @@ class TestSuite(unittest.TestCase):
          "method": "online_score",
          "arguments": {"email": "123@3.ru", "gender": 1}},
     ])
-    def test_invalid_argument_pairs(self, request):
+    def test_func_argument_pairs(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.INVALID_REQUEST, code)
         self.assertRegex(response.get("message"), api.FIELD_REQUEST_ERRORS[api.REQUEST_ARG_ERROR])
 
+
+    ## Online score calculation test
+
+    @cases([
+        {"account": "horns&hoofs", "login": "h&f", "method": "online_score",
+         "arguments": {"gender": 1, "birthday": "01.01.2000"}},
+    ])
+    def test_func_online_score(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.OK, code)
+        self.assertGreaterEqual(response.get("score"), 0)
+
+
+    ## Interests search test
+
+    @cases([
+        {"account": "horns&hoofs", "login": "h&f", "method": "clients_interests",
+         "arguments": {"client_ids": [1, 2]}},
+    ])
+    def test_func_client_interests(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        print ("RES=", response)
+        self.assertEqual(api.OK, code)
+        self.assertEqual(self.context.get("nclients"), len(request["arguments"]["client_ids"]))
+        self.assertEqual(len(request["arguments"]["client_ids"]), len(response))
+        self.assertTrue(all(v and isinstance(v, list) and all(isinstance(i, str) for i in v)
+                            for v in response.values()))
+
+
+    # Acceptance tests
+
+    @cases([
+        {"account": "horns&hoofs", "login": "h&f", "method": "online_score",
+         "token": "55cc9ce545bcd144300fe9efc28e65d415b923ebb6be1e19d2750a2c03e80dd209a27954dca045e5bb12418e7d89b6d718a9e35af34e14e1d5bcd5a08f21fc95",
+         "arguments": {"phone": "71113334455", "email": "aaa@bbb.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "a", "last_name": "b"}},
+    ])
+    def test_acc_online_score_score50(self, request):
+        response = self.get_http_response(request)
+        self.assertEqual(api.OK, response.get("code"))
+        self.assertEqual(response.get("response").get("score"), 5.0)
+
+    @cases([
+        {"account": "horns&hoofs", "login": "h&f", "method": "online_score",
+         "token": "55cc9ce545bcd144300fe9efc28e65d415b923ebb6be1e19d2750a2c03e80dd209a27954dca045e5bb12418e7d89b6d718a9e35af34e14e1d5bcd5a08f21fc95",
+         "arguments": {"phone": "71113334455", "email": "aaa@bbb.ru", "birthday": "01.01.2000",
+                       "first_name": "a", "last_name": "b"}},
+    ])
+    def test_acc_online_score_score35(self, request):
+        response = self.get_http_response(request)
+        self.assertEqual(api.OK, response.get("code"))
+        self.assertEqual(response.get("response").get("score"), 3.5)
+
+    @cases([
+        {"account": "horns&hoofs", "login": "h&f", "method": "online_score",
+         "token": "55cc9ce545bcd144300fe9efc28e65d415b923ebb6be1e19d2750a2c03e80dd209a27954dca045e5bb12418e7d89b6d718a9e35af34e14e1d5bcd5a08f21fc95",
+         "arguments": {"phone": "71113334455", "email": "aaa@bbb.ru", "birthday": "01.01.2000",
+                       "first_name": "a"}},
+    ])
+    def test_acc_online_score_score30(self, request):
+        response = self.get_http_response(request)
+        self.assertEqual(api.OK, response.get("code"))
+        self.assertEqual(response.get("response").get("score"), 3.0)
+
+    @cases([
+        {"account": "horns&hoofs", "login": "h&f", "method": "online_score",
+         "token": "55cc9ce545bcd144300fe9efc28e65d415b923ebb6be1e19d2750a2c03e80dd209a27954dca045e5bb12418e7d89b6d718a9e35af34e14e1d5bcd5a08f21fc95",
+         "arguments": {"gender": 1, "birthday": "01.01.2000"}},
+    ])
+    def test_acc_online_score_score20(self, request):
+        response = self.get_http_response(request)
+        self.assertEqual(api.OK, response.get("code"))
+        self.assertEqual(response.get("response").get("score"), 1.5)
+
+    @cases([
+        {"account": "horns&hoofs", "login": "h&f", "method": "clients_interests",
+         "arguments": {"client_ids": [1]},
+         "token": "55cc9ce545bcd144300fe9efc28e65d415b923ebb6be1e19d2750a2c03e80dd209a27954dca045e5bb12418e7d89b6d718a9e35af34e14e1d5bcd5a08f21fc95"},
+        {"account": "horns&hoofs", "login": "h&f", "method": "clients_interests",
+         "arguments": {"client_ids": [1, 2]},
+         "token": "55cc9ce545bcd144300fe9efc28e65d415b923ebb6be1e19d2750a2c03e80dd209a27954dca045e5bb12418e7d89b6d718a9e35af34e14e1d5bcd5a08f21fc95"},
+        {"account": "horns&hoofs", "login": "h&f", "method": "clients_interests",
+         "arguments": {"client_ids": [1, 2, 3, 4, 5]},
+         "token": "55cc9ce545bcd144300fe9efc28e65d415b923ebb6be1e19d2750a2c03e80dd209a27954dca045e5bb12418e7d89b6d718a9e35af34e14e1d5bcd5a08f21fc95"},
+    ])
+    def test_acc_client_interests_1(self, request):
+        response = self.get_http_response(request)
+        print ("resp=", response)
+        self.assertEqual(api.OK, response.get("code"))
+        self.assertEqual(len(request["arguments"]["client_ids"]), len(response.get('response')))
+        self.assertTrue(all(v and isinstance(v, list) and all(isinstance(i, str) for i in v)
+                            for v in response.get('response').values()))
 
 
 if __name__ == "__main__":
