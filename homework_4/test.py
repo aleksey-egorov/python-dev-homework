@@ -260,6 +260,40 @@ class TestSuite(unittest.TestCase):
         self.assertRegex(response.get("message"), api.ERRORS[api.INVALID_REQUEST])
 
 
+    ## Arguments field test
+
+    @cases([
+        {"account": "admin", "login": "test",
+         "method": "online_score",
+         "arguments": "phone"},
+        {"account": "ivan", "login": "test",
+         "method": "online_score",
+         "arguments": 3},
+        {"account": "ivan", "login": "test",
+         "method": "online_score",
+         "arguments": -6},
+    ])
+    def test_invalid_arguments_field(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.INVALID_REQUEST, code)
+        self.assertRegex(response.get("message"), api.ERRORS[api.INVALID_REQUEST])
+        self.assertRegex(response.get("message"), api.FIELD_REQUEST_ERRORS[api.FIELD_ARG_ERROR])
+        self.assertRegex(response.get("message"), 'arguments')
+
+    @cases([
+        {"account": "ivan", "login": "test",
+         "method": "online_score"},
+    ])
+    def test_req_arguments_field(self, request):
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.INVALID_REQUEST, code)
+        self.assertRegex(response.get("message"), api.ERRORS[api.INVALID_REQUEST])
+        self.assertRegex(response.get("message"), api.FIELD_REQUEST_ERRORS[api.FIELD_REQUIRED_ERROR])
+        self.assertRegex(response.get("message"), 'arguments')
+
+
     ## Phone field tests
 
     @cases([
@@ -475,7 +509,6 @@ class TestSuite(unittest.TestCase):
     def test_ok_birthday_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
-        print ("RES=", response)
         self.assertEqual(api.OK, code)
 
 
@@ -725,6 +758,7 @@ class TestSuite(unittest.TestCase):
         self.assertRegex(response.get("message"), api.FIELD_REQUEST_ERRORS[api.FIELD_DATE_ERROR])
 
 
+
     # Functional tests
 
     ## Bad auth test
@@ -791,7 +825,6 @@ class TestSuite(unittest.TestCase):
     def test_func_client_interests(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
-        print ("RES=", response)
         self.assertEqual(api.OK, code)
         self.assertEqual(self.context.get("nclients"), len(request["arguments"]["client_ids"]))
         self.assertEqual(len(request["arguments"]["client_ids"]), len(response))
@@ -843,6 +876,17 @@ class TestSuite(unittest.TestCase):
         response = self.get_http_response(request)
         self.assertEqual(api.OK, response.get("code"))
         self.assertEqual(response.get("response").get("score"), 1.5)
+
+    @cases([
+        {"account": "horns&hoofs", "login": "admin", "method": "online_score",
+         "token": "ef70333170e882478cbaaa97fb07b613a02213e14e0a9094c4a6e0882f10bb505cd1f56ab4cf1707ddc374ae3b2e9bec2d90bc10b4f65bf744dae494b775ad6e",
+         "arguments": {"phone": "71113334455", "email": "aaa@bbb.ru", "birthday": "01.01.2000",
+                       "first_name": "a"}},
+    ])
+    def test_acc_online_score_admin(self, request):
+        response = self.get_http_response(request)
+        self.assertEqual(api.OK, response.get("code"))
+        self.assertEqual(response.get("response").get("score"), 42)
 
     @cases([
         {"account": "horns&hoofs", "login": "h&f", "method": "clients_interests",
