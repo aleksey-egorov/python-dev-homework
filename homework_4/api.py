@@ -14,6 +14,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from constants import *
 from scoring import get_score
 from scoring import get_interests
+from store import Store
 
 phone_pattern = re.compile(r'7(\d{10})')
 
@@ -170,13 +171,15 @@ class Request(metaclass=RequestMetaclass):
                 value = None
             field.set(value)
 
-    def err_msg(self, global_error_id, error):
+    def err_msg(self, global_error_id, error, custom_msg=''):
         msg = ERRORS[global_error_id]
         if isinstance(error, tuple):
             try:
                 msg += ": {} error - {}".format(error[0], FIELD_REQUEST_ERRORS[error[1]])
             except:
                 pass
+        if not custom_msg == '':
+            msg += ": %s" % custom_msg
         return msg
 
 
@@ -189,7 +192,11 @@ class ClientsInterestsRequest(Request):
         results = {}
         if not self.client_ids == None:
             for client in self.client_ids.value:
-                results[client] = get_interests(store, client)
+                try:
+                    results[client] = get_interests(store, client)
+                except Exception as error:
+                    print ("clilent int except")
+                    return {"message": self.err_msg(INTERNAL_ERROR, (), error.message)}, INTERNAL_ERROR
         return results, OK
 
     def check_arguments(self):
@@ -226,8 +233,8 @@ class OnlineScoreRequest(Request):
             try:
                 score = get_score(store, self.phone.value, self.email.value, self.birthday.value, self.gender.value,
                                 self.first_name.value, self.last_name.value)
-            except:
-                return {"message" :  self.err_msg(INTERNAL_ERROR, {})}, INTERNAL_ERROR
+            except Exception as error:
+                return {"message" :  self.err_msg(INTERNAL_ERROR, (), error.message)}, INTERNAL_ERROR
 
         return {"score": score}, OK
 
@@ -282,7 +289,6 @@ def method_handler(request, ctx, store):
     try:
         method.check_auth()
     except Exception as error:
-        print ("ER=", error.args)
         return {"message": method.err_msg(FORBIDDEN, error.args)}, FORBIDDEN
 
     if method.request_handler:
@@ -301,16 +307,16 @@ class MainHTTPHandler(BaseHTTPRequestHandler):
     router = {
         "method": method_handler
     }
-    store = None
+
 
     def get_request_id(self, headers):
         return headers.get('HTTP_X_REQUEST_ID', uuid.uuid4().hex)
 
     def do_POST(self):
+        store = Store()
         response, code = {}, OK
         context = {"request_id": self.get_request_id(self.headers)}
         request = None
-        logging.info(self.headers)
         try:
             data_string = self.rfile.read(int(self.headers['Content-Length']))
             request = json.loads(data_string)
@@ -323,7 +329,7 @@ class MainHTTPHandler(BaseHTTPRequestHandler):
             logging.info("%s: %s %s" % (self.path, data_string, context["request_id"]))
             if path in self.router:
                 try:
-                    response, code = self.router[path]({"body": request, "headers": self.headers}, context, self.store)
+                    response, code = self.router[path]({"body": request, "headers": self.headers}, context, store)
                 except Exception as e:
                     logging.exception("Unexpected error: %s" % e)
                     code = INTERNAL_ERROR

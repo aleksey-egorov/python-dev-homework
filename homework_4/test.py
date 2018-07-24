@@ -25,7 +25,7 @@ class TestSuite(unittest.TestCase):
     def setUp(self):
         self.context = {}
         self.headers = {}
-        self.store = None
+        self.store = api.Store()
 
     def get_response(self, request):
         return api.method_handler({"body": request, "headers": self.headers}, self.context, self.store)
@@ -46,7 +46,6 @@ class TestSuite(unittest.TestCase):
         req = requests.Request("post", "http://127.0.0.1:8080/method/", json=request, headers=headers)
         prep = req.prepare()
         resp = session.send(prep)
-        print ("PRE JSON=", resp.text)
         response = json.loads(resp.text)
         return response
 
@@ -54,7 +53,7 @@ class TestSuite(unittest.TestCase):
 
     ## Common tests
 
-    def test_empty_request(self):
+    def test_unit_empty_request(self):
         _, code = self.get_response({})
         self.assertEqual(api.INVALID_REQUEST, code)
 
@@ -64,7 +63,7 @@ class TestSuite(unittest.TestCase):
         {"account": "horns&hoofs", "login": "h&f"},
         {"account": "h12324oofs", "methods": "online_score", "token": "", "arguments": {}},
     ])
-    def test_invalid_request(self, request):
+    def test_unit_invalid_request(self, request):
         _, code = self.get_response(request)
         self.assertEqual(api.INVALID_REQUEST, code)
 
@@ -85,7 +84,7 @@ class TestSuite(unittest.TestCase):
          "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
                        "first_name": "Ivan", "last_name": "Petrov"}},
     ])
-    def test_ok_account_field(self, request):
+    def test_unit_ok_account_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.OK, code)
@@ -105,7 +104,7 @@ class TestSuite(unittest.TestCase):
          "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
                        "first_name": "Ivan", "last_name": "Petrov"}},
     ])
-    def test_invalid_account_field(self, request):
+    def test_unit_invalid_account_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.INVALID_REQUEST, code)
@@ -128,7 +127,7 @@ class TestSuite(unittest.TestCase):
           "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
                        "first_name": "Ivan", "last_name": "Petrov"}},
     ])
-    def test_ok_login_field(self, request):
+    def test_unit_ok_login_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.OK, code)
@@ -148,7 +147,7 @@ class TestSuite(unittest.TestCase):
          "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
                        "first_name": "Ivan", "last_name": "Petrov"}},
     ])
-    def test_invalid_login_field(self, request):
+    def test_unit_invalid_login_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.INVALID_REQUEST, code)
@@ -167,7 +166,7 @@ class TestSuite(unittest.TestCase):
           "method": "clients_interests",
           "arguments": {"client_ids": [6,7], "date": "20.07.2017"}},
     ])
-    def test_ok_method_field(self, request):
+    def test_unit_ok_method_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.OK, code)
@@ -180,7 +179,7 @@ class TestSuite(unittest.TestCase):
          "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
                        "first_name": "Ivan", "last_name": "Petrov"}},
     ])
-    def test_invalid_method_field(self, request):
+    def test_unit_invalid_method_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.INVALID_REQUEST, code)
@@ -193,7 +192,7 @@ class TestSuite(unittest.TestCase):
          "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
                        "first_name": "Ivan", "last_name": "Petrov"}},
     ])
-    def test_null_method_field(self, request):
+    def test_unit_null_method_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.INVALID_REQUEST, code)
@@ -205,7 +204,7 @@ class TestSuite(unittest.TestCase):
          "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
                        "first_name": "Ivan", "last_name": "Petrov"}},
     ])
-    def test_no_method_field(self, request):
+    def test_unit_no_method_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.INVALID_REQUEST, code)
@@ -222,10 +221,11 @@ class TestSuite(unittest.TestCase):
                        "first_name": "Ivan", "last_name": "Petrov"}},
          {"account": "ivan", "login": "ivan1",
            "token": "9ce4596ad0cdd2f2f24d6e6fc534a2f9d6cdfe481e8755558c9dfd349fec4bd6776f44c19ff8f780325c6c38112d811edb5dd2d05158f6c9a8ae9698e1ba6f56",
-          "method": "clients_interests",
-          "arguments": {"client_ids": [6,7], "date": "20.07.2017"}},
+          "method": "online_score",
+          "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
+                       "first_name": "Ivan", "last_name": "Petrov"}},
     ])
-    def test_ok_token_field(self, request):
+    def test_unit_ok_token_field(self, request):
         response, code = self.get_response(request)
         self.assertEqual(api.OK, code)
 
@@ -241,7 +241,7 @@ class TestSuite(unittest.TestCase):
          "arguments": {"phone": "71112223344", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
                        "first_name": "Ivan", "last_name": "Petrov"}},
     ])
-    def test_invalid_token_field(self, request):
+    def test_unit_invalid_token_field(self, request):
         response, code = self.get_response(request)
         self.assertEqual(api.FORBIDDEN, code)
         self.assertRegex(response.get("message"), api.ERRORS[api.FORBIDDEN])
@@ -254,7 +254,7 @@ class TestSuite(unittest.TestCase):
                        "first_name": "Ivan", "last_name": "Petrov"}},
 
     ])
-    def test_null_token_field(self, request):
+    def test_unit_null_token_field(self, request):
         response, code = self.get_response(request)
         self.assertEqual(api.INVALID_REQUEST, code)
         self.assertRegex(response.get("message"), api.ERRORS[api.INVALID_REQUEST])
@@ -273,7 +273,7 @@ class TestSuite(unittest.TestCase):
          "method": "online_score",
          "arguments": -6},
     ])
-    def test_invalid_arguments_field(self, request):
+    def test_unit_invalid_arguments_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.INVALID_REQUEST, code)
@@ -285,7 +285,7 @@ class TestSuite(unittest.TestCase):
         {"account": "ivan", "login": "test",
          "method": "online_score"},
     ])
-    def test_req_arguments_field(self, request):
+    def test_unit_req_arguments_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.INVALID_REQUEST, code)
@@ -314,7 +314,7 @@ class TestSuite(unittest.TestCase):
          "arguments": {"phone": "", "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
                        "first_name": "Ivan", "last_name": "Petrov"}},
     ])
-    def test_ok_phone_field(self, request):
+    def test_unit_ok_phone_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.OK, code)
@@ -342,7 +342,7 @@ class TestSuite(unittest.TestCase):
          "arguments": {"phone": {}, "email": "123@123.ru", "gender": 1, "birthday": "01.01.2000",
                        "first_name": "Ivan", "last_name": "Petrov"}},
     ])
-    def test_invalid_phone_field(self, request):
+    def test_unit_invalid_phone_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.INVALID_REQUEST, code)
@@ -373,7 +373,7 @@ class TestSuite(unittest.TestCase):
          "arguments": {"phone": "70000000000", "email": "@123.ru", "gender": 1, "birthday": "01.01.2000",
                        "first_name": "Ivan", "last_name": "Petrov"}},
     ])
-    def test_ok_email_field(self, request):
+    def test_unit_ok_email_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.OK, code)
@@ -386,7 +386,7 @@ class TestSuite(unittest.TestCase):
                        "first_name": "Ivan", "last_name": "Petrov"}},
 
     ])
-    def test_invalid_email_field(self, request):
+    def test_unit_wrong_email_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.INVALID_REQUEST, code)
@@ -407,7 +407,7 @@ class TestSuite(unittest.TestCase):
          "arguments": {"phone": "70000000000", "email": {}, "gender": 1, "birthday": "01.01.2000",
                        "first_name": "Ivan", "last_name": "Petrov"}},
     ])
-    def test_str_email_field(self, request):
+    def test_unit_invalid_email_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.INVALID_REQUEST, code)
@@ -439,7 +439,7 @@ class TestSuite(unittest.TestCase):
          "arguments": {"phone": "70000000000", "email": "@123.ru", "birthday": "01.01.2000",
                        "first_name": "Ivan", "last_name": "Petrov"}},
     ])
-    def test_ok_gender_field(self, request):
+    def test_unit_ok_gender_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.OK, code)
@@ -460,7 +460,7 @@ class TestSuite(unittest.TestCase):
                        "first_name": "Ivan", "last_name": "Petrov"}},
 
     ])
-    def test_invalid_gender_field(self, request):
+    def test_unit_invalid_gender_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.INVALID_REQUEST, code)
@@ -478,7 +478,7 @@ class TestSuite(unittest.TestCase):
                        "first_name": "Ivan", "last_name": "Petrov"}},
 
     ])
-    def test_wrong_gender_field(self, request):
+    def test_unit_wrong_gender_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.INVALID_REQUEST, code)
@@ -506,7 +506,7 @@ class TestSuite(unittest.TestCase):
                        "first_name": "Ivan", "last_name": "Petrov"}},
 
     ])
-    def test_ok_birthday_field(self, request):
+    def test_unit_ok_birthday_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.OK, code)
@@ -527,7 +527,7 @@ class TestSuite(unittest.TestCase):
                        "first_name": "Ivan", "last_name": "Petrov"}},
 
     ])
-    def test_invalid_birthday_field(self, request):
+    def test_unit_invalid_birthday_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.INVALID_REQUEST, code)
@@ -545,7 +545,7 @@ class TestSuite(unittest.TestCase):
                        "first_name": "Ivan", "last_name": "Petrov"}},
 
     ])
-    def test_wrong_birthday_field(self, request):
+    def test_unit_wrong_birthday_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.INVALID_REQUEST, code)
@@ -572,7 +572,7 @@ class TestSuite(unittest.TestCase):
          "arguments": {"phone": "70000000000", "email": "123@3.ru", "gender": 1, "birthday": "01.01.2000",
                         "last_name": "Petrov"}},
     ])
-    def test_ok_firstname_field(self, request):
+    def test_unit_ok_firstname_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.OK, code)
@@ -592,7 +592,7 @@ class TestSuite(unittest.TestCase):
          "arguments": {"phone": "71112223344", "email": "1233@.ru", "gender": 1, "birthday": "01.01.2000",
                        "first_name": {}, "last_name": "Petrov"}},
     ])
-    def test_invalid_firstname_field(self, request):
+    def test_unit_invalid_firstname_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.INVALID_REQUEST, code)
@@ -619,7 +619,7 @@ class TestSuite(unittest.TestCase):
          "arguments": {"phone": "70000000000", "email": "123@3.ru", "gender": 1, "birthday": "01.01.2000",
                         "first_name": "Ivan"}},
     ])
-    def test_ok_lastname_field(self, request):
+    def test_unit_ok_lastname_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.OK, code)
@@ -639,7 +639,7 @@ class TestSuite(unittest.TestCase):
          "arguments": {"phone": "71112223344", "email": "1233@.ru", "gender": 1, "birthday": "01.01.2000",
                        "first_name": "Ivan", "last_name": {}}},
     ])
-    def test_invalid_lastname_field(self, request):
+    def test_unit_invalid_lastname_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.INVALID_REQUEST, code)
@@ -662,7 +662,7 @@ class TestSuite(unittest.TestCase):
          "method": "clients_interests",
          "arguments": {"client_ids": [1]}},
     ])
-    def test_ok_client_ids_field(self, request):
+    def test_unit_ok_client_ids_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.OK, code)
@@ -685,7 +685,7 @@ class TestSuite(unittest.TestCase):
          "method": "clients_interests",
          "arguments": {"client_ids": {'id':'6'}}},
     ])
-    def test_invalid_client_ids_field(self, request):
+    def test_unit_invalid_client_ids_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.INVALID_REQUEST, code)
@@ -697,7 +697,7 @@ class TestSuite(unittest.TestCase):
          "method": "clients_interests",
          "arguments": {"client_ids": []}},
     ])
-    def test_null_client_ids_field(self, request):
+    def test_unit_null_client_ids_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.INVALID_REQUEST, code)
@@ -712,7 +712,7 @@ class TestSuite(unittest.TestCase):
          "method": "clients_interests",
          "arguments": {"client_ids": [7, -1, 2]}},
     ])
-    def test_negative_client_ids_field(self, request):
+    def test_unit_negative_client_ids_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.INVALID_REQUEST, code)
@@ -730,7 +730,7 @@ class TestSuite(unittest.TestCase):
          "arguments": {"client_ids": [4, 7], "date": ""}},
 
     ])
-    def test_ok_interests_date_field(self, request):
+    def test_unit_ok_interests_date_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.OK, code)
@@ -751,7 +751,7 @@ class TestSuite(unittest.TestCase):
          "arguments": {"client_ids": [4, 7], "date": "2008.07.17"}},
 
     ])
-    def test_invalid_interests_date_field(self, request):
+    def test_unit_invalid_interests_date_field(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.INVALID_REQUEST, code)
@@ -837,8 +837,8 @@ class TestSuite(unittest.TestCase):
     @cases([
         {"account": "horns&hoofs", "login": "h&f", "method": "online_score",
          "token": "55cc9ce545bcd144300fe9efc28e65d415b923ebb6be1e19d2750a2c03e80dd209a27954dca045e5bb12418e7d89b6d718a9e35af34e14e1d5bcd5a08f21fc95",
-         "arguments": {"phone": "71113334455", "email": "aaa@bbb.ru", "gender": 1, "birthday": "01.01.2000",
-                       "first_name": "a", "last_name": "b"}},
+         "arguments": {"phone": "75556664455", "email": "aaa@bbb.ru", "gender": 1, "birthday": "11.01.1980",
+                       "first_name": "Ivan", "last_name": "Sergeev"}},
     ])
     def test_acc_online_score_score50(self, request):
         response = self.get_http_response(request)
@@ -848,8 +848,8 @@ class TestSuite(unittest.TestCase):
     @cases([
         {"account": "horns&hoofs", "login": "h&f", "method": "online_score",
          "token": "55cc9ce545bcd144300fe9efc28e65d415b923ebb6be1e19d2750a2c03e80dd209a27954dca045e5bb12418e7d89b6d718a9e35af34e14e1d5bcd5a08f21fc95",
-         "arguments": {"phone": "71113334455", "email": "aaa@bbb.ru", "birthday": "01.01.2000",
-                       "first_name": "a", "last_name": "b"}},
+         "arguments": {"phone": "78883334455", "email": "aaa@bbb.ru", "birthday": "21.01.2000",
+                       "first_name": "John", "last_name": "Smith"}},
     ])
     def test_acc_online_score_score35(self, request):
         response = self.get_http_response(request)
@@ -859,8 +859,8 @@ class TestSuite(unittest.TestCase):
     @cases([
         {"account": "horns&hoofs", "login": "h&f", "method": "online_score",
          "token": "55cc9ce545bcd144300fe9efc28e65d415b923ebb6be1e19d2750a2c03e80dd209a27954dca045e5bb12418e7d89b6d718a9e35af34e14e1d5bcd5a08f21fc95",
-         "arguments": {"phone": "71113334455", "email": "aaa@bbb.ru", "birthday": "01.01.2000",
-                       "first_name": "a"}},
+         "arguments": {"phone": "72223334455", "email": "aaa@bbb.ru", "birthday": "01.03.2005",
+                       "first_name": "aaaa"}},
     ])
     def test_acc_online_score_score30(self, request):
         response = self.get_http_response(request)
@@ -870,7 +870,7 @@ class TestSuite(unittest.TestCase):
     @cases([
         {"account": "horns&hoofs", "login": "h&f", "method": "online_score",
          "token": "55cc9ce545bcd144300fe9efc28e65d415b923ebb6be1e19d2750a2c03e80dd209a27954dca045e5bb12418e7d89b6d718a9e35af34e14e1d5bcd5a08f21fc95",
-         "arguments": {"gender": 1, "birthday": "01.01.2000"}},
+         "arguments": {"gender": 1, "birthday": "01.01.2006"}},
     ])
     def test_acc_online_score_score20(self, request):
         response = self.get_http_response(request)
@@ -884,6 +884,8 @@ class TestSuite(unittest.TestCase):
                        "first_name": "a"}},
     ])
     def test_acc_online_score_admin(self, request):
+        # Токен генерируется автоматически для удобства тестирования. В реальных условиях срок жизни токена админа - один час
+        self.set_valid_auth(request)
         response = self.get_http_response(request)
         self.assertEqual(api.OK, response.get("code"))
         self.assertEqual(response.get("response").get("score"), 42)
@@ -901,7 +903,6 @@ class TestSuite(unittest.TestCase):
     ])
     def test_acc_client_interests_1(self, request):
         response = self.get_http_response(request)
-        print ("resp=", response)
         self.assertEqual(api.OK, response.get("code"))
         self.assertEqual(len(request["arguments"]["client_ids"]), len(response.get('response')))
         self.assertTrue(all(v and isinstance(v, list) and all(isinstance(i, str) for i in v)
