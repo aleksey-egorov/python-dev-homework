@@ -1,4 +1,5 @@
 import redis
+from store_cfg import *
 
 
 class StoreError(Exception):
@@ -22,9 +23,10 @@ class Store():
 
 
 class CacheStore():
-    def __init__(self):
-        self.conn = redis.StrictRedis(host='', port=6379, password='', encoding='utf-8',
-                                      socket_timeout=0.5, socket_connect_timeout=0.4, retry_on_timeout=True, max_connections=3,  db=0)
+    def __init__(self, socket_timeout=0.5, socket_connect_timeout=0.5):
+        self.conn = redis.StrictRedis(host=store_host, port=6379, password=store_password, encoding='utf-8',
+                                      socket_timeout=socket_timeout, socket_connect_timeout=socket_connect_timeout,
+                                      retry_on_timeout=True, max_connections=3,  db=0)
 
     def set(self, key, value, time):
         try:
@@ -42,9 +44,10 @@ class CacheStore():
 
 
 class PersistentStore():
-    def __init__(self):
-        self.conn = redis.StrictRedis(host='', port=6379, password='', encoding='utf-8',
-                                      socket_timeout=1, socket_connect_timeout=0.8, retry_on_timeout=True, max_connections=10, db=0)
+    def __init__(self, socket_timeout=1, socket_connect_timeout=1):
+        self.conn = redis.StrictRedis(host=store_host, port=6379, password=store_password, encoding='utf-8',
+                                      socket_timeout=socket_timeout, socket_connect_timeout=socket_connect_timeout,
+                                      retry_on_timeout=True, max_connections=10, db=0)
 
     def set(self, key, value):
         try:

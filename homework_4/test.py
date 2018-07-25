@@ -4,8 +4,10 @@ import hashlib
 import datetime
 import requests
 import json
+import time
 
 import api
+from store import CacheStore, PersistentStore
 
 
 
@@ -758,6 +760,66 @@ class TestSuite(unittest.TestCase):
         self.assertRegex(response.get("message"), api.FIELD_REQUEST_ERRORS[api.FIELD_DATE_ERROR])
 
 
+    ## Store tests
+
+    @cases([
+        {"test": "test value"},
+        {"test": "Тестовое значение"},
+    ])
+    def test_unit_ok_cache_store(self, case):
+        storage = CacheStore()
+        key = list(case.keys())[0]
+        storage.set(key, case[key], 60)
+        val = storage.get(key)
+        self.assertEqual(val.decode('utf-8'), case[key])
+
+    @cases([
+        {"test": "test value"},
+        {"test": "Тестовое значение"},
+    ])
+    def test_unit_ok_persistent_store(self, case):
+        storage = PersistentStore()
+        key = list(case.keys())[0]
+        storage.set(key, case[key])
+        val = storage.get(key)
+        self.assertEqual(val.decode('utf-8'), case[key])
+
+    @cases([
+        {"test": "test value"},
+    ])
+    def test_unit_invalid_cache_store(self, case):
+        # Устанавливаем очень низкий timeout для эмуляции отсутствия связи с хранилищем
+        storage = CacheStore(socket_timeout=0.001, socket_connect_timeout=0.001)
+        key = list(case.keys())[0]
+        storage.set(key, case[key], 60)
+        val = storage.get(key)
+        self.assertEqual(val, None)
+
+    @cases([
+        {"test": "test value"},
+    ])
+    def test_unit_invalid_persistent_store(self, case):
+        # Устанавливаем очень низкий timeout для эмуляции отсутствия связи с хранилищем
+        storage = PersistentStore(socket_timeout=0.001, socket_connect_timeout=0.001)
+        key = list(case.keys())[0]
+        try:
+            storage.set(key, case[key])
+            val = storage.get(key)
+        except Exception as error:
+            self.assertRegex(error.message, "Timeout connecting to server")
+
+    @cases([
+        {"test": "test value"},
+    ])
+    def test_unit_expired_cache_store(self, case):
+        storage = CacheStore()
+        key = list(case.keys())[0]
+        storage.set(key, case[key], 1) # Записываем значение с минимальным сроком хранения - 1 сек
+        time.sleep(1)
+        val = storage.get(key) # Значение должно быть пустым
+        self.assertEqual(val, None)
+
+
 
     # Functional tests
 
@@ -830,6 +892,8 @@ class TestSuite(unittest.TestCase):
         self.assertEqual(len(request["arguments"]["client_ids"]), len(response))
         self.assertTrue(all(v and isinstance(v, list) and all(isinstance(i, str) for i in v)
                             for v in response.values()))
+
+
 
 
     # Acceptance tests

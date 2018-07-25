@@ -21,7 +21,7 @@ phone_pattern = re.compile(r'7(\d{10})')
 
 class ValidationError(Exception):
     def __init__(self, field, error):
-        logging.error("Field '{}' error: {}".format(field, FIELD_REQUEST_ERRORS[error]))
+        logging.error("Validation error: {} - {}".format(field, FIELD_REQUEST_ERRORS[error]))
 
 
 class Field(object):
