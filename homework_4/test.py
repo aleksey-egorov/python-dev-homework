@@ -821,7 +821,7 @@ class TestSuite(unittest.TestCase):
 
 
 
-    # Functional tests
+    #### Functional tests
 
     ## Bad auth test
 
@@ -894,9 +894,25 @@ class TestSuite(unittest.TestCase):
                             for v in response.values()))
 
 
+    ## Persistent store failure test
+
+    @cases([
+        {"account": "horns&hoofs", "login": "h&f", "method": "clients_interests",
+         "arguments": {"client_ids": [1, 2]}},
+    ])
+    def test_func_invalid_persistent_store(self, request):
+            self.set_valid_auth(request)
+            # Устанавливаем очень низкий timeout для эмуляции отсутствия связи с хранилищем
+            self.store = api.Store(socket_timeout=0.001, socket_connect_timeout=0.001)
+            response, code = self.get_response(request)
+            self.assertEqual(api.INTERNAL_ERROR, code)
+            message = response.get("message")
+            self.assertRegex(message, "Store error")
+            self.assertRegex(message, "Timeout connecting to server")
 
 
-    # Acceptance tests
+
+    #### Acceptance tests
 
     @cases([
         {"account": "horns&hoofs", "login": "h&f", "method": "online_score",

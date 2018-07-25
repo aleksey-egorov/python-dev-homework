@@ -8,8 +8,9 @@ class StoreError(Exception):
 
 
 class Store():
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.storage = None
+        self.kwargs = kwargs
 
     def set_mode(self, mode):
         handler = {
@@ -17,7 +18,7 @@ class Store():
             'cache': CacheStore
         }
         try:
-            self.storage = handler[mode]()
+            self.storage = handler[mode](**self.kwargs)
         except Exception as err:
             raise StoreError(err)
 
