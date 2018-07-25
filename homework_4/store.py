@@ -30,15 +30,13 @@ class CacheStore():
 
     def set(self, key, value, time):
         try:
-            res = self.conn.set(key, value, ex=time)
-            return res
+            return self.conn.set(key, value, ex=time)
         except:
             pass
 
     def get(self, key):
         try:
-            res = self.conn.get(key)
-            return res
+            return self.conn.get(key)
         except:
             pass
 
@@ -51,14 +49,12 @@ class PersistentStore():
 
     def set(self, key, value):
         try:
-            res = self.conn.set(key, value)
-            return res
+            return self.conn.set(key, value)
         except Exception as err:
             raise StoreError(err)
 
     def get(self, key):
         try:
-            res = self.conn.get(key)
-            return res
+            return self.conn.get(key)
         except Exception as err:
             raise StoreError(err)
