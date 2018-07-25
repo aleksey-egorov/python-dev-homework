@@ -3,6 +3,7 @@
 ## Scoring API Test
 
 Набор тестов для Scoring API, в который входят unit-, functional- и acceptance-тесты
+
 В качестве хранилища используется внешний инстанс Redis
 
 Используется Python 3.6
