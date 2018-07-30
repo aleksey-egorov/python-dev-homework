@@ -219,6 +219,7 @@ class SimpleRequestHandler():
                     raise
 
     def parse_url(self, url):
+        print ('parsing url:', url)
         return url.split("/")
 
     def do_post(self):
@@ -237,11 +238,12 @@ class SimpleRequestHandler():
         return content
 
     def get_content(self, url_parts):
-        path = os.path.join(*url_parts)
+        path = os.path.join(self.server.doc_root, *url_parts)
+        print("PATH=", path)
         if os.path.exists(path):
             if os.path.isdir(path):
                 path = os.path.join(path, 'index.html')
-            print("PATH=", path)
+
             try:
                 content = open(path, 'r').read()
                 return content
@@ -267,15 +269,16 @@ class SimpleResponseHandler():
         response += headers_str + "\r\n"
         response += self.content
 
+        print("FINAL RESP: ", response)
         self.request.send(response.encode("utf-8"))
 
     def make_headers(self):
         headers = {
-            'Date': datetime.datetime.now(),
-            'Server': 'simple-http-server',
-            'Content‐Length': len(self.content),
-            'Content‐Type': self.content_type,
-            'Connection': 'keep-alive'
+             'Date': datetime.datetime.now(),
+             'Server': 'simple-http-server',
+             'Content-Length': len(self.content),
+             'Content-Type': self.content_type,
+             'Connection': 'keep-alive'
         }
         return ''.join(["%s: %s\r\n" % (key, headers[key]) for key in headers.keys()])
 

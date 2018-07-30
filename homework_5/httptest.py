@@ -30,22 +30,22 @@ class HttpServer(unittest.TestCase):
     server = r.getheader("Server")
     self.assertIsNotNone(server)
 
-  def rtest_directory_index(self):
+  def test_directory_index(self):
     """directory index file exists"""
     self.conn.request("GET", "/httptest/dir2/")
     r = self.conn.getresponse()
-    data = r.read()
+    data = r.read().decode("utf-8")
     length = r.getheader("Content-Length")
     self.assertEqual(int(r.status), 200)
     self.assertEqual(int(length), 34)
     self.assertEqual(len(data), 34)
     self.assertEqual(data, "<html>Directory index file</html>\n")
 
-  def rtest_index_not_found(self):
+  def test_index_not_found(self):
     """directory index file absent"""
     self.conn.request("GET", "/httptest/dir1/")
     r = self.conn.getresponse()
-    data = r.read()
+    data = r.read().decode("utf-8")
     self.assertEqual(int(r.status), 404)
 
   def rtest_file_not_found(self):
