@@ -132,7 +132,7 @@ class SimpleHttpServer():
         self.shutdown_request(request)
 
     #def finish_request(self, request, client_address):
-        """Finish one request by instantiating RequestHandlerClass."""
+        #"""Finish one request by instantiating RequestHandlerClass."""
         #self.RequestHandler(request, client_address, self)
 
     def shutdown_request(self, request):
@@ -165,11 +165,12 @@ class SimpleHttpHandler():
         self.server = server
 
         self.req_handler = SimpleRequestHandler(request, server)
-        response = self.req_handler.process_request()
-        print ("RESPONSE=", response)
+        resp_content = self.req_handler.process_request()
+        print ("RESPONSE=", resp_content)
 
-        self.resp_handler = SimpleResponseHandler(request, response)
+        self.resp_handler = SimpleResponseHandler(request, resp_content)
         result = self.resp_handler.send_response()
+        print("RESULT=", result)
 
 
 class SimpleRequestHandler():
@@ -178,6 +179,7 @@ class SimpleRequestHandler():
         self.allowed_methods = ['GET', 'HEAD', 'POST']
         self.request = request
         self.server = server
+        self.headers = {}
 
     def process_request(self):
         self.read_request()
@@ -191,24 +193,30 @@ class SimpleRequestHandler():
 
     def parse_headers(self):
         headers_parts = self.data.split("\r\n")
-        parts =  headers_parts[0].split(" ")
-        headers = {
-            'method': parts[0],
-            'url': parts[1],
-            'protocol': parts[2]
-        }
-        for pt in headers_parts[1:]:
-            key, val = pt.split(": ")
-            headers[key] = val
-        self.headers = headers
+        try:
+            parts =  headers_parts[0].split(" ")
+            self.headers = {
+                'method': parts[0],
+                'url': parts[1],
+                'protocol': parts[2]
+            }
+        except:
+            logging.info("Request format is invalid")
+        try:
+            for pt in headers_parts[1:]:
+                key, val = pt.split(": ")
+                self.headers[key] = val
+        except:
+            pass
 
     def handle_request(self):
-        if self.headers["method"] in self.allowed_methods:
-            try:
-                method = self.__getattribute__('do_' + self.headers["method"].lower())
-                return method()
-            except:
-                raise
+        if "method" in self.headers:
+            if self.headers["method"] in self.allowed_methods:
+                try:
+                    method = self.__getattribute__('do_' + self.headers["method"].lower())
+                    return method()
+                except:
+                    raise
 
     def parse_url(self, url):
         return url.split("/")
@@ -221,31 +229,50 @@ class SimpleRequestHandler():
 
     def do_get(self):
         print ("GET:", self.data)
-        url = self.parse_url(self.headers['url'])
-        file = os.path.join(self.server.doc_root, url[1])
-        content = open(file, 'r').read()
+        url_parts = self.parse_url(self.headers['url'])
+        content = self.get_content(url_parts)
+
         print ("ct=", content)
 
         return content
+
+    def get_content(self, url_parts):
+        path = os.path.join(*url_parts)
+        if os.path.exists(path):
+            if os.path.isdir(path):
+                path = os.path.join(path, 'index.html')
+            print("PATH=", path)
+            try:
+                content = open(path, 'r').read()
+                return content
+            except:
+                pass
+
 
 
 class SimpleResponseHandler():
 
     def __init__(self, request, content):
         self.request = request
-        self.content = content
+        self.content = str(content)
+        self.protocol = 'HTTP/1.1'
         self.content_type = ''
 
     def send_response(self):
         headers_str = self.make_headers()
-        print ("HEAD=", headers_str)
-        content = self.content.encode("utf-8")
-        self.request.send(content)
+
+        self.response_code = '200'
+
+        response = self.protocol + ' ' + self.response_code + "\r\n"
+        response += headers_str + "\r\n"
+        response += self.content
+
+        self.request.send(response.encode("utf-8"))
 
     def make_headers(self):
         headers = {
             'Date': datetime.datetime.now(),
-            'Server': 'my-http-server',
+            'Server': 'simple-http-server',
             'Content‐Length': len(self.content),
             'Content‐Type': self.content_type,
             'Connection': 'keep-alive'
