@@ -2,12 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import logging
-import time
+import datetime
 import os
 from optparse import OptionParser
 from socket import *
 
-class MyHttpServer():
+class SimpleHttpServer():
     timeout = None
 
     def __init__(self, server_address, handler, worker=1, doc_root='./htdocs/', activate=True):
@@ -83,12 +83,12 @@ class MyHttpServer():
             time.sleep(10)
             return
         if self.verify_request(request, client_address):
-            try:
-                self.process_request(request, client_address)
-            except Exception as err:
-                print ("ERR EX=", err)
-                self.handle_error(request, client_address)
-                self.shutdown_request(request)
+            #try:
+            self.process_request(request, client_address)
+            #except Exception as err:
+            #    print ("ERR EX=", type(err), err)
+            #    self.handle_error(request, client_address)
+            #    self.shutdown_request(request)
         else:
             self.shutdown_request(request)
 
@@ -113,6 +113,7 @@ class MyHttpServer():
               May be overridden.
               """
         self.socket.close()
+        logging.info("Server is closed")
 
     def get_request(self):
         """Get the request and client address from the socket.
@@ -127,12 +128,12 @@ class MyHttpServer():
         """Call finish_request.
         Overridden by ForkingMixIn and ThreadingMixIn.
         """
-        self.finish_request(request, client_address)
+        self.RequestHandler(request, client_address, self)
         self.shutdown_request(request)
 
-    def finish_request(self, request, client_address):
+    #def finish_request(self, request, client_address):
         """Finish one request by instantiating RequestHandlerClass."""
-        self.RequestHandler(request, client_address, self)
+        #self.RequestHandler(request, client_address, self)
 
     def shutdown_request(self, request):
         """Called to shutdown and close an individual request."""
@@ -140,6 +141,7 @@ class MyHttpServer():
             # explicitly shutdown.  socket.close() merely releases
             # the socket and waits for GC to perform the actual close.
             request.shutdown(SHUT_WR)
+            logging.info("Request is shut down")
         except Exception as err:
             print("ERROR=", type(err), err)
             pass  # some platforms may raise ENOTCONN here
@@ -148,6 +150,7 @@ class MyHttpServer():
     def close_request(self, request):
         """Called to clean up an individual request."""
         request.close()
+        logging.info("Request is closed")
 
     def handle_error(self, request, client_address):
         print ("HANDLE ERROR=", request, client_address)
@@ -155,20 +158,35 @@ class MyHttpServer():
 
 
 
-class MyHttpHandler():
+class SimpleHttpHandler():
     def __init__(self, request, client_address, server):
 
-        self.allowed_methods = ['GET', 'HEAD', 'POST']
-        self.request = request
         self.client_address = client_address
         self.server = server
 
+        self.req_handler = SimpleRequestHandler(request, server)
+        response = self.req_handler.process_request()
+        print ("RESPONSE=", response)
+
+        self.resp_handler = SimpleResponseHandler(request, response)
+        result = self.resp_handler.send_response()
+
+
+class SimpleRequestHandler():
+
+    def __init__(self, request, server):
+        self.allowed_methods = ['GET', 'HEAD', 'POST']
+        self.request = request
+        self.server = server
+
+    def process_request(self):
         self.read_request()
         self.parse_headers()
-        self.handle_request()
+        return self.handle_request()
 
     def read_request(self):
-        data = self.request.recv(1024).strip()
+        data = self.request.recv(1024)
+        data = data.strip()
         self.data = data.decode("utf-8")
 
     def parse_headers(self):
@@ -184,28 +202,58 @@ class MyHttpHandler():
             headers[key] = val
         self.headers = headers
 
-    def parse_url(self, url):
-        return url.split("/")
-
     def handle_request(self):
         if self.headers["method"] in self.allowed_methods:
             try:
                 method = self.__getattribute__('do_' + self.headers["method"].lower())
-                method()
+                return method()
             except:
                 raise
+
+    def parse_url(self, url):
+        return url.split("/")
 
     def do_post(self):
         print ("POST:", self.data)
         print ("root: ", self.server.doc_root)
+
+        return '123'
 
     def do_get(self):
         print ("GET:", self.data)
         url = self.parse_url(self.headers['url'])
         file = os.path.join(self.server.doc_root, url[1])
         content = open(file, 'r').read()
+        print ("ct=", content)
 
-        print ('ct=', content)
+        return content
+
+
+class SimpleResponseHandler():
+
+    def __init__(self, request, content):
+        self.request = request
+        self.content = content
+        self.content_type = ''
+
+    def send_response(self):
+        headers_str = self.make_headers()
+        print ("HEAD=", headers_str)
+        content = self.content.encode("utf-8")
+        self.request.send(content)
+
+    def make_headers(self):
+        headers = {
+            'Date': datetime.datetime.now(),
+            'Server': 'my-http-server',
+            'Content‐Length': len(self.content),
+            'Content‐Type': self.content_type,
+            'Connection': 'keep-alive'
+        }
+        return ''.join(["%s: %s\r\n" % (key, headers[key]) for key in headers.keys()])
+
+
+
 
 
 
@@ -220,7 +268,7 @@ if __name__ == "__main__":
                         format='[%(asctime)s] %(levelname).1s %(message)s', datefmt='%Y.%m.%d %H:%M:%S')
     logging.info("Starting server at %s" % opts.port)
 
-    server = MyHttpServer(("localhost", opts.port), handler=MyHttpHandler, worker=opts.worker, doc_root=opts.root)
+    server = SimpleHttpServer(("localhost", opts.port), handler=SimpleHttpHandler, worker=opts.worker, doc_root=opts.root)
 
     try:
         server.serve_forever()
