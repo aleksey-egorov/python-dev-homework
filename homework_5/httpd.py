@@ -249,22 +249,27 @@ class SimpleRequestHandler():
 
     def get_content(self, url_parts):
         path = os.path.join(self.server.doc_root, *url_parts)
-        print("PATH CONST=", path)
         if os.path.exists(path):
             if os.path.isdir(path):
                 path = os.path.join(path, 'index.html')
             try:
-                body = open(path, 'r').read()
-                print ("MIME=", mimetypes.read_mime_types(path))
+                body = bytes()
+                with open(path, 'rb') as file:
+                    while True:
+                        chunk = file.read(4096)
+                        if not chunk:
+                            break
+                        body += chunk
+
                 content = {
                     'body': body,
-                    'length': len(str(body)),
+                    'length': os.path.getsize(path),
                     'type': mimetypes.guess_type(path)[0],
                     'code': 200
                 }
                 return content
             except Exception as err:
-                print ("EXCCEPTION:", err)
+                print ("EXCEPTION:", err)
         return {'code': 404}
 
 
@@ -303,12 +308,20 @@ class SimpleResponseHandler():
     def send_response(self):
         headers_str = self.make_headers()
 
-        response = self.protocol + ' ' + str(self.content['code']) + ' ' + self.get_status() + "\r\n"
-        response += headers_str + "\r\n"
-        response += str(self.content['body'])
+        headers = self.protocol + ' ' + str(self.content['code']) + ' ' + self.get_status() + "\r\n"
+        headers += headers_str + "\r\n"
+        headers = headers.encode("utf-8")
 
-        print("FINAL RESP: ", response)
-        self.request.send(response.encode("utf-8"))
+        body = self.content['body']
+        if body == None:
+            body = bytes()
+        elif isinstance(body, str):
+            body = body.encode("utf-8")
+
+        #print("FINAL RESP: ", type(headers))
+        #print("FINAL BODY: ", type(body))
+        response = headers + body
+        self.request.send(response)
 
     def make_headers(self):
         headers = {
