@@ -4,8 +4,10 @@
 import logging
 import datetime
 import os
+import mimetypes
 from optparse import OptionParser
 from socket import *
+from urllib.parse import unquote
 
 class SimpleHttpServer():
     timeout = None
@@ -165,10 +167,10 @@ class SimpleHttpHandler():
         self.server = server
 
         self.req_handler = SimpleRequestHandler(request, server)
-        resp_content = self.req_handler.process_request()
-        print ("RESPONSE=", resp_content)
+        content = self.req_handler.process_request()
+        print ("CONTENT=", content)
 
-        self.resp_handler = SimpleResponseHandler(request, resp_content)
+        self.resp_handler = SimpleResponseHandler(request, content)
         result = self.resp_handler.send_response()
         print("RESULT=", result)
 
@@ -197,7 +199,7 @@ class SimpleRequestHandler():
             parts =  headers_parts[0].split(" ")
             self.headers = {
                 'method': parts[0],
-                'url': parts[1],
+                'url': unquote(parts[1]),
                 'protocol': parts[2]
             }
         except:
@@ -216,58 +218,94 @@ class SimpleRequestHandler():
                     method = self.__getattribute__('do_' + self.headers["method"].lower())
                     return method()
                 except:
-                    raise
+                    pass
+        return {'code': 400}
 
     def parse_url(self, url):
-        print ('parsing url:', url)
-        return url.split("/")
+        #print ('parsing url:', url)
+        bad_parts = ['..', 'etc', 'passwd']
+        parts = url.split("/")
+        query_params = ""
+        if "?" in parts[-1]:
+            fname, query_params = parts[-1].split("?")
+            parts[-1] = fname
+        for part in parts:
+            if part in bad_parts:
+                return None, None
+        return parts, query_params
+
+    def do_head(self):
+        url_parts, query_params = self.parse_url(self.headers['url'])
+        content = self.get_content(url_parts)
+        content['body'] = ''
+        return content
 
     def do_post(self):
-        print ("POST:", self.data)
-        print ("root: ", self.server.doc_root)
-
-        return '123'
+        return {'code': 405}
 
     def do_get(self):
-        print ("GET:", self.data)
-        url_parts = self.parse_url(self.headers['url'])
-        content = self.get_content(url_parts)
-
-        print ("ct=", content)
-
-        return content
+        url_parts, query_params = self.parse_url(self.headers['url'])
+        return self.get_content(url_parts)
 
     def get_content(self, url_parts):
         path = os.path.join(self.server.doc_root, *url_parts)
-        print("PATH=", path)
+        print("PATH CONST=", path)
         if os.path.exists(path):
             if os.path.isdir(path):
                 path = os.path.join(path, 'index.html')
-
             try:
-                content = open(path, 'r').read()
+                body = open(path, 'r').read()
+                print ("MIME=", mimetypes.read_mime_types(path))
+                content = {
+                    'body': body,
+                    'length': len(str(body)),
+                    'type': mimetypes.guess_type(path)[0],
+                    'code': 200
+                }
                 return content
-            except:
-                pass
-
+            except Exception as err:
+                print ("EXCCEPTION:", err)
+        return {'code': 404}
 
 
 class SimpleResponseHandler():
 
     def __init__(self, request, content):
         self.request = request
-        self.content = str(content)
+        self.content = {}
         self.protocol = 'HTTP/1.1'
-        self.content_type = ''
+
+        self.statuses = {
+            200: ('OK', 'Request complete, response send'),
+            400: ('Bad Request',
+                  'Bad request syntax'),
+            403: ('Forbidden',
+                  'Request forbidden'),
+            404: ('Not Found', 'Document not found by given URI'),
+            405: ('Method Not Allowed',
+                  'Specified method is invalid'),
+        }
+        self.check_content(content)
+
+    def check_content(self, content):
+        for key in ['body', 'code', 'length', 'type']:
+            if key in content:
+                self.content[key] = content[key]
+            else:
+                self.content[key] = None
+
+    def get_status(self):
+        try:
+            return self.statuses[self.content['code']][0]
+        except:
+            return ''
 
     def send_response(self):
         headers_str = self.make_headers()
 
-        self.response_code = '200'
-
-        response = self.protocol + ' ' + self.response_code + "\r\n"
+        response = self.protocol + ' ' + str(self.content['code']) + ' ' + self.get_status() + "\r\n"
         response += headers_str + "\r\n"
-        response += self.content
+        response += str(self.content['body'])
 
         print("FINAL RESP: ", response)
         self.request.send(response.encode("utf-8"))
@@ -276,8 +314,8 @@ class SimpleResponseHandler():
         headers = {
              'Date': datetime.datetime.now(),
              'Server': 'simple-http-server',
-             'Content-Length': len(self.content),
-             'Content-Type': self.content_type,
+             'Content-Length': self.content['length'],
+             'Content-Type': self.content['type'],
              'Connection': 'keep-alive'
         }
         return ''.join(["%s: %s\r\n" % (key, headers[key]) for key in headers.keys()])
