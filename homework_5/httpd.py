@@ -178,7 +178,7 @@ class SimpleHttpHandler():
 class SimpleRequestHandler():
 
     def __init__(self, request, server):
-        self.allowed_methods = ['GET', 'HEAD', 'POST']
+        self.allowed_methods = ['GET', 'HEAD']
         self.request = request
         self.server = server
         self.headers = {}
@@ -219,7 +219,7 @@ class SimpleRequestHandler():
                     return method()
                 except:
                     pass
-        return {'code': 400}
+        return {'code': 405}
 
     def parse_url(self, url):
         #print ('parsing url:', url)
@@ -237,17 +237,16 @@ class SimpleRequestHandler():
     def do_head(self):
         url_parts, query_params = self.parse_url(self.headers['url'])
         content = self.get_content(url_parts)
-        content['body'] = ''
+        content['body'] = None
         return content
-
-    def do_post(self):
-        return {'code': 405}
 
     def do_get(self):
         url_parts, query_params = self.parse_url(self.headers['url'])
         return self.get_content(url_parts)
 
     def get_content(self, url_parts):
+        if url_parts == None:
+            return {'code': 400}
         path = os.path.join(self.server.doc_root, *url_parts)
         if os.path.exists(path):
             if os.path.isdir(path):
