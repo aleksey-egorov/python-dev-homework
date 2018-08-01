@@ -5,6 +5,8 @@ import logging
 import datetime
 import os
 import mimetypes
+import multiprocessing
+
 from optparse import OptionParser
 from socket import *
 from urllib.parse import unquote
@@ -23,7 +25,6 @@ class SimpleHttpServer():
 
         self.__shutdown_request = False
         self.__is_working = False
-        self.allow_reuse_address = False
         self.request_queue_size = 5
 
         if activate:
@@ -39,17 +40,11 @@ class SimpleHttpServer():
         self.__is_working = False
         try:
             while not self.__shutdown_request:
-                # XXX: Consider using another file descriptor or
-                # connecting to the socket to wake this up instead of
-                # polling. Polling reduces our responsiveness to a
-                # shutdown request and wastes cpu at all other times.
-               # r, w, e = _eintr_retry(select.select, [self], [], [],
-                #                       poll_interval)
-
+                self.__is_working = True
                 self._handle_request_noblock()
         finally:
             self.__shutdown_request = False
-            self.__is_working = True
+            self.__is_working = False
 
     def shutdown(self):
         """Stops the serve_forever loop.
@@ -80,17 +75,16 @@ class SimpleHttpServer():
         """
         try:
             request, client_address = self.get_request()
+            logging.info("Recieved request from {}".format(client_address))
         except Exception as err:
-            print ("ERROR=", type(err), err)
-            time.sleep(10)
+            logging.error("Error getting request: {}".format(err))
             return
         if self.verify_request(request, client_address):
-            #try:
-            self.process_request(request, client_address)
-            #except Exception as err:
-            #    print ("ERR EX=", type(err), err)
-            #    self.handle_error(request, client_address)
-            #    self.shutdown_request(request)
+            try:
+                self.process_request(request, client_address)
+            except Exception as err:
+                logging.error("Error processing request: {}".format(err))
+                self.shutdown_request(request)
         else:
             self.shutdown_request(request)
 
@@ -98,8 +92,6 @@ class SimpleHttpServer():
         """Called by constructor to bind the socket.
         May be overridden.
         """
-        if self.allow_reuse_address:
-            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind(self.server_address)
         self.server_address = self.socket.getsockname()
 
@@ -133,10 +125,6 @@ class SimpleHttpServer():
         self.RequestHandler(request, client_address, self)
         self.shutdown_request(request)
 
-    #def finish_request(self, request, client_address):
-        #"""Finish one request by instantiating RequestHandlerClass."""
-        #self.RequestHandler(request, client_address, self)
-
     def shutdown_request(self, request):
         """Called to shutdown and close an individual request."""
         try:
@@ -145,7 +133,7 @@ class SimpleHttpServer():
             request.shutdown(SHUT_WR)
             logging.info("Request is shut down")
         except Exception as err:
-            print("ERROR=", type(err), err)
+            logging.error("Error shutting down request: {}".format(err))
             pass  # some platforms may raise ENOTCONN here
         self.close_request(request)
 
@@ -155,8 +143,7 @@ class SimpleHttpServer():
         logging.info("Request is closed")
 
     def handle_error(self, request, client_address):
-        print ("HANDLE ERROR=", request, client_address)
-        #print ("ERROR=", self.socket.error)
+        logging.error( request, client_address)
 
 
 
@@ -168,11 +155,12 @@ class SimpleHttpHandler():
 
         self.req_handler = SimpleRequestHandler(request, server)
         content = self.req_handler.process_request()
-        print ("CONTENT=", content)
 
         self.resp_handler = SimpleResponseHandler(request, content)
         result = self.resp_handler.send_response()
-        print("RESULT=", result)
+        logging.info("Response result: code={}, body_length={}, content_type={}, send={}".format(self.resp_handler.content['code'],
+                                                                                                 self.resp_handler.content['length'],
+                                                                                                 self.resp_handler.content['type'], result))
 
 
 class SimpleRequestHandler():
@@ -222,7 +210,6 @@ class SimpleRequestHandler():
         return {'code': 405}
 
     def parse_url(self, url):
-        #print ('parsing url:', url)
         bad_parts = ['..', 'etc', 'passwd']
         parts = url.split("/")
         query_params = ""
@@ -268,7 +255,7 @@ class SimpleRequestHandler():
                 }
                 return content
             except Exception as err:
-                print ("EXCEPTION:", err)
+                logging.error("Error getting request content: {}".format(err))
         return {'code': 404}
 
 
@@ -317,10 +304,13 @@ class SimpleResponseHandler():
         elif isinstance(body, str):
             body = body.encode("utf-8")
 
-        #print("FINAL RESP: ", type(headers))
-        #print("FINAL BODY: ", type(body))
         response = headers + body
-        self.request.send(response)
+        try:
+            self.request.send(response)
+            return True
+        except Exception as err:
+            logging.error("Error while sending response: {}".format(err))
+            return False
 
     def make_headers(self):
         headers = {
@@ -348,10 +338,21 @@ if __name__ == "__main__":
                         format='[%(asctime)s] %(levelname).1s %(message)s', datefmt='%Y.%m.%d %H:%M:%S')
     logging.info("Starting server at %s" % opts.port)
 
-    server = SimpleHttpServer(("localhost", opts.port), handler=SimpleHttpHandler, worker=opts.worker, doc_root=opts.root)
+    server = SimpleHttpServer(("localhost", opts.port), handler=SimpleHttpHandler, worker=opts.worker,
+                              doc_root=opts.root)
+    def run_server():
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            pass
+        except Exception as err:
+            logging.error("Error starting server: {}".format(err))
+        server.close_server()
 
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        pass
-    server.close_server()
+    for wrk in range(int(opts.worker)):
+        logging.info("Starting worker {}".format(wrk))
+        p = multiprocessing.Process(target=run_server)
+        p.start()
+
+
+
