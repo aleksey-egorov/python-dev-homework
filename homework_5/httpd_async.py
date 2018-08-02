@@ -48,13 +48,15 @@ class SimpleHttpServer(asyncore.dispatcher):
                 logging.error("Error processing request: {}".format(err))
                 self.shutdown_request(request)
 
-
     def serve_forever(self):
         self.__is_working = False
         try:
             while not self.__shutdown_request:
                 self.__is_working = True
-                asyncore.loop(timeout=1, use_poll=True, poller=asyncore.epoll_poller)
+                try:
+                    asyncore.loop(timeout=1, use_poll=True, poller=asyncore.epoll_poller)
+                except:
+                    logging.error("Asyncore error")
         finally:
             self.__shutdown_request = False
             self.__is_working = False
@@ -100,20 +102,35 @@ class SimpleHttpServer(asyncore.dispatcher):
 
 class SimpleHttpHandler(asynchat.async_chat):
     def __init__(self, request, client_address, server):
-        super().__init__(self, request)
+        #super().__init__(sock=request)
+        asynchat.async_chat.__init__(self, sock=request)
+
+        #self.addr = client_address
+        #self.set_terminator(b"\r\n\r\n")
+        self.reading_headers = True
+        self.handling = False
 
         self.client_address = client_address
         self.server = server
+        self.set_terminator(b"\r\n\r\n")
+        print ("asynchat init")
 
     def collect_incoming_data(self, data):
         self._collect_incoming_data(data)
 
-    def found_terminator(self):
-        self.process_request()
+   # def found_terminator(self):
+   #     self.process_request()
 
-    def process_request(self):
+
+    def found_terminator(self):
+        logging.info("found term")
+        self.handling = True
+        self.set_terminator(None)
+        self.handle_request()
+
+    def handle_request(self):
         request = self._get_data()
-        self.req_handler = SimpleRequestHandler(request, server)
+        self.req_handler = SimpleRequestHandler(request, self.server)
         content = self.req_handler.process_request()
 
         self.resp_handler = SimpleResponseHandler(request, content)
