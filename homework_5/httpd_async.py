@@ -48,6 +48,10 @@ class SimpleHttpServer(asyncore.dispatcher):
                 logging.error("Error processing request: {}".format(err))
                 self.shutdown_request(request)
 
+    def handle_close(self):
+        pass
+       # logging.info("Handle close")
+
     def serve_forever(self):
         self.__is_working = False
         try:
@@ -141,7 +145,7 @@ class SimpleHttpHandler_2(asynchat.async_chat):
             self.resp_handler.content['type'], result))
 
 
-class SimpleHttpHandler(asynchat.async_chat):
+class SimpleHttpHandler_1(asynchat.async_chat):
     def __init__(self, request, client_address, server):
         #super().__init__(self, sock=request)
         asynchat.async_chat.__init__(self, sock=request)
@@ -169,6 +173,21 @@ class SimpleHttpHandler(asynchat.async_chat):
             self.resp_handler.content['length'],
             self.resp_handler.content['type'], result))
 
+
+class SimpleHttpHandler():
+    def __init__(self, request, client_address, server):
+
+        self.client_address = client_address
+        self.server = server
+
+        self.req_handler = SimpleRequestHandler(request, server)
+        content = self.req_handler.process_request()
+
+        self.resp_handler = SimpleResponseHandler(request, content)
+        result = self.resp_handler.send_response()
+        logging.info("Response result: code={}, body_length={}, content_type={}, send={}".format(self.resp_handler.content['code'],
+                                                                                                 self.resp_handler.content['length'],
+                                                                                                 self.resp_handler.content['type'], result))
 
 class SimpleRequestHandler():
 
