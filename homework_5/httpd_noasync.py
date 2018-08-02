@@ -15,7 +15,6 @@ class SimpleHttpServer():
     timeout = None
 
     def __init__(self, server_address, handler, worker=1, doc_root='./htdocs/', activate=True):
-        """Constructor"""
 
         self.server_address = server_address
         self.socket = socket(AF_INET, SOCK_STREAM)
@@ -31,12 +30,8 @@ class SimpleHttpServer():
             self.bind_server()
             self.activate_server()
 
-    def serve_forever(self, poll_interval=0.5):
-        """Handle one request at a time until shutdown.
-        Polls for shutdown every poll_interval seconds. Ignores
-        self.timeout. If you need to do periodic tasks, do them in
-        another thread.
-        """
+    def serve_forever(self):
+
         self.__is_working = False
         try:
             while not self.__shutdown_request:
@@ -47,25 +42,8 @@ class SimpleHttpServer():
             self.__is_working = False
 
     def shutdown(self):
-        """Stops the serve_forever loop.
-        Blocks until the loop has finished. This must be called while
-        serve_forever() is running in another thread, or it will
-        deadlock.
-        """
         self.__shutdown_request = True
         self.__is_working = False
-
-    # The distinction between handling, getting, processing and
-    # finishing a request is fairly arbitrary.  Remember:
-    #
-    # - handle_request() is the top-level call.  It calls
-    #   select, get_request(), verify_request() and process_request()
-    # - get_request() is different for stream or datagram sockets
-    # - process_request() is the place that may fork a new process
-    #   or create a new thread to finish the request
-    # - finish_request() instantiates the request handler class;
-    #   this constructor will handle the request all by itself
-
 
     def _handle_request_noblock(self):
         """Handle one request, without blocking.

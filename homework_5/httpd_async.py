@@ -7,6 +7,7 @@ import os
 import mimetypes
 import multiprocessing
 import asyncore_epoll as asyncore
+import asynchat
 
 from optparse import OptionParser
 import socket
@@ -18,10 +19,12 @@ class SimpleHttpServer(asyncore.dispatcher):
     def __init__(self, server_address, handler, worker=1, doc_root='./htdocs/', activate=True):
         super().__init__()
 
+        if not hasattr(socket, 'SO_REUSEPORT'):
+            socket.SO_REUSEPORT = 15
+
         self.server_address = server_address
-        #self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        #elf.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         self.RequestHandler = handler
         self.worker = worker
         self.doc_root = doc_root
@@ -34,106 +37,52 @@ class SimpleHttpServer(asyncore.dispatcher):
             self.bind_server()
             self.activate_server()
 
-    def serve_forever(self, poll_interval=0.5):
-        """Handle one request at a time until shutdown.
-        Polls for shutdown every poll_interval seconds. Ignores
-        self.timeout. If you need to do periodic tasks, do them in
-        another thread.
-        """
-        self.__is_working = False
-        try:
-            while not self.__shutdown_request:
-                self.__is_working = True
-                self._handle_request_noblock()
-        finally:
-            self.__shutdown_request = False
-            self.__is_working = False
-
-    def shutdown(self):
-        """Stops the serve_forever loop.
-        Blocks until the loop has finished. This must be called while
-        serve_forever() is running in another thread, or it will
-        deadlock.
-        """
-        self.__shutdown_request = True
-        self.__is_working = False
-
-    # The distinction between handling, getting, processing and
-    # finishing a request is fairly arbitrary.  Remember:
-    #
-    # - handle_request() is the top-level call.  It calls
-    #   select, get_request(), verify_request() and process_request()
-    # - get_request() is different for stream or datagram sockets
-    # - process_request() is the place that may fork a new process
-    #   or create a new thread to finish the request
-    # - finish_request() instantiates the request handler class;
-    #   this constructor will handle the request all by itself
-
-
-    def _handle_request_noblock(self):
-        """Handle one request, without blocking.
-        I assume that select.select has returned that the socket is
-        readable before this function was called, so there should be
-        no risk of blocking in get_request().
-        """
-        try:
-            request, client_address = self.get_request()
-            logging.info("Recieved request from {}".format(client_address))
-        except Exception as err:
-            logging.error("Error getting request: {}".format(err))
-            return
-        if self.verify_request(request, client_address):
+    def handle_accept(self):
+        accept = self.accept()
+        if accept is not None:
+            request, client_address = accept
+            logging.info("Connection from {}".format(client_address))
             try:
                 self.process_request(request, client_address)
             except Exception as err:
                 logging.error("Error processing request: {}".format(err))
                 self.shutdown_request(request)
-        else:
-            self.shutdown_request(request)
+
+
+    def serve_forever(self):
+        self.__is_working = False
+        try:
+            while not self.__shutdown_request:
+                self.__is_working = True
+                asyncore.loop(timeout=1, use_poll=True, poller=asyncore.epoll_poller)
+        finally:
+            self.__shutdown_request = False
+            self.__is_working = False
+
+    def shutdown(self):
+        self.__shutdown_request = True
+        self.__is_working = False
 
     def bind_server(self):
-        """Called by constructor to bind the socket.
-        May be overridden.
-        """
-        self.socket.bind(self.server_address)
-        self.server_address = self.socket.getsockname()
+        logging.info("Bind: %s" % str(self.server_address))
+        self.bind(self.server_address)
+        self.server_address = self.getsockname()
 
     def activate_server(self):
-        """Called by constructor to activate the server.
-        May be overridden.
-        """
-        self.socket.listen(self.request_queue_size)
+        self.listen(self.request_queue_size)
         logging.info("Server is active ...")
 
     def close_server(self):
-        """Called to clean-up the server.
-              May be overridden.
-              """
-        self.socket.close()
+        self.close()
         logging.info("Server is closed")
 
-    def get_request(self):
-        """Get the request and client address from the socket.
-        May be overridden.
-        """
-        return self.socket.accept()
-
-    def verify_request(self, request, client_address):
-        return True
-
     def process_request(self, request, client_address):
-        """Call finish_request.
-        Overridden by ForkingMixIn and ThreadingMixIn.
-        """
         self.RequestHandler(request, client_address, self)
         self.shutdown_request(request)
 
     def shutdown_request(self, request):
-        """Called to shutdown and close an individual request."""
         try:
-            # explicitly shutdown.  socket.close() merely releases
-            # the socket and waits for GC to perform the actual close.
-            request.shutdown(SHUT_WR)
+            request.shutdown(socket.SHUT_WR)
             logging.info("Request is shut down")
         except Exception as err:
             logging.error("Error shutting down request: {}".format(err))
@@ -141,8 +90,7 @@ class SimpleHttpServer(asyncore.dispatcher):
         self.close_request(request)
 
     def close_request(self, request):
-        """Called to clean up an individual request."""
-        request.close()
+        self.handle_close()
         logging.info("Request is closed")
 
     def handle_error(self, request, client_address):
@@ -150,20 +98,30 @@ class SimpleHttpServer(asyncore.dispatcher):
 
 
 
-class SimpleHttpHandler():
+class SimpleHttpHandler(asynchat.async_chat):
     def __init__(self, request, client_address, server):
+        super().__init__(self, request)
 
         self.client_address = client_address
         self.server = server
 
+    def collect_incoming_data(self, data):
+        self._collect_incoming_data(data)
+
+    def found_terminator(self):
+        self.process_request()
+
+    def process_request(self):
+        request = self._get_data()
         self.req_handler = SimpleRequestHandler(request, server)
         content = self.req_handler.process_request()
 
         self.resp_handler = SimpleResponseHandler(request, content)
         result = self.resp_handler.send_response()
-        logging.info("Response result: code={}, body_length={}, content_type={}, send={}".format(self.resp_handler.content['code'],
-                                                                                                 self.resp_handler.content['length'],
-                                                                                                 self.resp_handler.content['type'], result))
+        logging.info("Response result: code={}, body_length={}, content_type={}, send={}".format(
+            self.resp_handler.content['code'],
+            self.resp_handler.content['length'],
+            self.resp_handler.content['type'], result))
 
 
 class SimpleRequestHandler():
@@ -324,10 +282,6 @@ class SimpleResponseHandler():
              'Connection': 'keep-alive'
         }
         return ''.join(["%s: %s\r\n" % (key, headers[key]) for key in headers.keys()])
-
-
-
-
 
 
 if __name__ == "__main__":
