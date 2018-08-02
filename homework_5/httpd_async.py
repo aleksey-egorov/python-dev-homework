@@ -100,7 +100,7 @@ class SimpleHttpServer(asyncore.dispatcher):
 
 
 
-class SimpleHttpHandler(asynchat.async_chat):
+class SimpleHttpHandler_2(asynchat.async_chat):
     def __init__(self, request, client_address, server):
         #super().__init__(sock=request)
         asynchat.async_chat.__init__(self, sock=request)
@@ -131,6 +131,35 @@ class SimpleHttpHandler(asynchat.async_chat):
     def handle_request(self):
         request = self._get_data()
         self.req_handler = SimpleRequestHandler(request, self.server)
+        content = self.req_handler.process_request()
+
+        self.resp_handler = SimpleResponseHandler(request, content)
+        result = self.resp_handler.send_response()
+        logging.info("Response result: code={}, body_length={}, content_type={}, send={}".format(
+            self.resp_handler.content['code'],
+            self.resp_handler.content['length'],
+            self.resp_handler.content['type'], result))
+
+
+class SimpleHttpHandler(asynchat.async_chat):
+    def __init__(self, request, client_address, server):
+        #super().__init__(self, sock=request)
+        asynchat.async_chat.__init__(self, sock=request)
+
+        self.client_address = client_address
+        self.server = server
+        self.set_terminator(b"\r\n\r\n")
+
+    def collect_incoming_data(self, data):
+        self._collect_incoming_data(data)
+
+    def found_terminator(self):
+        logging.info("foun term")
+        self.process_request()
+
+    def process_request(self):
+        request = self._get_data()
+        self.req_handler = SimpleRequestHandler(request, server)
         content = self.req_handler.process_request()
 
         self.resp_handler = SimpleResponseHandler(request, content)
