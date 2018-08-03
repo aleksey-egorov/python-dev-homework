@@ -38,15 +38,18 @@ class SimpleHttpServer(asyncore.dispatcher):
             self.activate_server()
 
     def handle_accept(self):
-        accept = self.accept()
-        if accept is not None:
-            request, client_address = accept
-            logging.info("Connection from {}".format(client_address))
-            try:
-                self.process_request(request, client_address)
-            except Exception as err:
-                logging.error("Error processing request: {}".format(err))
-                self.shutdown_request(request)
+        try:
+            request, client_address = self.accept()
+            logging.info("Recieved request from {}".format(client_address))
+        except Exception as err:
+            logging.error("Error getting request: {}".format(err))
+            return
+        try:
+            self.process_request(request, client_address)
+        except Exception as err:
+            logging.error("Error processing request: {}".format(err))
+        finally:
+            self.shutdown_request(request)
 
     def handle_close(self):
         logging.info("Handle close")
@@ -58,15 +61,15 @@ class SimpleHttpServer(asyncore.dispatcher):
                 self.__is_working = True
                 try:
                     asyncore.loop(timeout=1, use_poll=True, poller=asyncore.epoll_poller)
-                except:
-                    logging.error("Asyncore error")
+                except OSError as err:
+                    logging.error("Error asyncore: {}".format(err))
         finally:
             self.__shutdown_request = False
             self.__is_working = False
 
-    def shutdown(self):
-        self.__shutdown_request = True
-        self.__is_working = False
+   # def shutdown(self):
+   #     self.__shutdown_request = True
+   #     self.__is_working = False
 
     def bind_server(self):
         logging.info("Bind: %s" % str(self.server_address))
@@ -90,63 +93,19 @@ class SimpleHttpServer(asyncore.dispatcher):
             request.shutdown(socket.SHUT_WR)
             logging.info("Request is shut down")
         except Exception as err:
-            logging.error("Error shutting down request: {}".format(err))
+            logging.error("Error shutting down request: {} request={}".format(err, request))
             pass  # some platforms may raise ENOTCONN here
-        self.close_request(request)
+        finally:
+            self.close_request(request)
 
     def close_request(self, request):
         self.handle_close()
         logging.info("Request is closed")
 
-    def handle_error(self, request, client_address):
-        logging.error( request, client_address)
 
-
-
-class SimpleHttpHandler_2(asynchat.async_chat):
+class SimpleHttpHandler_new(asynchat.async_chat):
     def __init__(self, request, client_address, server):
         #super().__init__(sock=request)
-        asynchat.async_chat.__init__(self, sock=request)
-
-        #self.addr = client_address
-        #self.set_terminator(b"\r\n\r\n")
-        self.reading_headers = True
-        self.handling = False
-
-        self.client_address = client_address
-        self.server = server
-        self.set_terminator(b"\r\n\r\n")
-        print ("asynchat init")
-
-    def collect_incoming_data(self, data):
-        self._collect_incoming_data(data)
-
-   # def found_terminator(self):
-   #     self.process_request()
-
-
-    def found_terminator(self):
-        logging.info("found term")
-        self.handling = True
-        self.set_terminator(None)
-        self.handle_request()
-
-    def handle_request(self):
-        request = self._get_data()
-        self.req_handler = SimpleRequestHandler(request, self.server)
-        content = self.req_handler.process_request()
-
-        self.resp_handler = SimpleResponseHandler(request, content)
-        result = self.resp_handler.send_response()
-        logging.info("Response result: code={}, body_length={}, content_type={}, send={}".format(
-            self.resp_handler.content['code'],
-            self.resp_handler.content['length'],
-            self.resp_handler.content['type'], result))
-
-
-class SimpleHttpHandler_1(asynchat.async_chat):
-    def __init__(self, request, client_address, server):
-        #super().__init__(self, sock=request)
         asynchat.async_chat.__init__(self, sock=request)
 
         self.client_address = client_address
@@ -175,9 +134,10 @@ class SimpleHttpHandler_1(asynchat.async_chat):
 
 class SimpleHttpHandler():
     def __init__(self, request, client_address, server):
-        #asynchat.async_chat.__init__(self, sock=request)
+
         self.client_address = client_address
         self.server = server
+        self.reading_headers = True
 
         self.req_handler = SimpleRequestHandler(request, server)
         content = self.req_handler.process_request()
@@ -368,7 +328,8 @@ if __name__ == "__main__":
             pass
         except Exception as err:
             logging.error("Error starting server: {}".format(err))
-        server.close_server()
+        finally:
+            server.close_server()
 
     for wrk in range(int(opts.worker)):
         logging.info("Starting worker {}".format(wrk))

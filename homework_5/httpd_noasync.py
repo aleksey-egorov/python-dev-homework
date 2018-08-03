@@ -40,9 +40,9 @@ class SimpleHttpServer():
             self.__shutdown_request = False
             self.__is_working = False
 
-    def shutdown(self):
-        self.__shutdown_request = True
-        self.__is_working = False
+   # def shutdown(self):
+   #     self.__shutdown_request = True
+   #     self.__is_working = False
 
     def _handle_request_noblock(self):
         try:
@@ -63,7 +63,6 @@ class SimpleHttpServer():
         self.server_address = self.socket.getsockname()
 
     def activate_server(self):
-        self.socket.settimeout(10)
         self.socket.listen(self.request_queue_size)
         logging.info("Server is active ...")
 
@@ -73,7 +72,6 @@ class SimpleHttpServer():
 
     def get_request(self):
         accept = self.socket.accept()
-        self.socket.settimeout(None)
         return accept
 
     def process_request(self, request, client_address):
@@ -294,7 +292,8 @@ if __name__ == "__main__":
             pass
         except Exception as err:
             logging.error("Error starting server: {}".format(err))
-        server.close_server()
+        finally:
+            server.close_server()
 
     for wrk in range(int(opts.worker)):
         logging.info("Starting worker {}".format(wrk))
