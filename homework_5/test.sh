@@ -1,1 +1,1 @@
-ab -c 100 -n 50000 -t 600 -s 60 -r http://localhost:8080/
+ab -c 100 -t 600 -s 60 -n 50000 -r http://localhost:8080/

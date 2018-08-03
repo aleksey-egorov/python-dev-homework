@@ -31,7 +31,6 @@ class SimpleHttpServer():
             self.activate_server()
 
     def serve_forever(self):
-
         self.__is_working = False
         try:
             while not self.__shutdown_request:
@@ -46,77 +45,51 @@ class SimpleHttpServer():
         self.__is_working = False
 
     def _handle_request_noblock(self):
-        """Handle one request, without blocking.
-        I assume that select.select has returned that the socket is
-        readable before this function was called, so there should be
-        no risk of blocking in get_request().
-        """
         try:
             request, client_address = self.get_request()
             logging.info("Recieved request from {}".format(client_address))
         except Exception as err:
             logging.error("Error getting request: {}".format(err))
             return
-        if self.verify_request(request, client_address):
-            try:
-                self.process_request(request, client_address)
-            except Exception as err:
-                logging.error("Error processing request: {}".format(err))
-                self.shutdown_request(request)
-        else:
+        try:
+            self.process_request(request, client_address)
+        except Exception as err:
+            logging.error("Error processing request: {}".format(err))
+        finally:
             self.shutdown_request(request)
 
     def bind_server(self):
-        """Called by constructor to bind the socket.
-        May be overridden.
-        """
         self.socket.bind(self.server_address)
         self.server_address = self.socket.getsockname()
 
     def activate_server(self):
-        """Called by constructor to activate the server.
-        May be overridden.
-        """
+        self.socket.settimeout(10)
         self.socket.listen(self.request_queue_size)
         logging.info("Server is active ...")
 
     def close_server(self):
-        """Called to clean-up the server.
-              May be overridden.
-              """
         self.socket.close()
         logging.info("Server is closed")
 
     def get_request(self):
-        """Get the request and client address from the socket.
-        May be overridden.
-        """
-        return self.socket.accept()
-
-    def verify_request(self, request, client_address):
-        return True
+        accept = self.socket.accept()
+        self.socket.settimeout(None)
+        return accept
 
     def process_request(self, request, client_address):
-        """Call finish_request.
-        Overridden by ForkingMixIn and ThreadingMixIn.
-        """
         self.RequestHandler(request, client_address, self)
-        self.shutdown_request(request)
 
     def shutdown_request(self, request):
-        """Called to shutdown and close an individual request."""
         try:
-            # explicitly shutdown.  socket.close() merely releases
-            # the socket and waits for GC to perform the actual close.
             request.shutdown(SHUT_WR)
             logging.info("Request is shut down")
         except Exception as err:
-            logging.error("Error shutting down request: {}".format(err))
+            logging.error("Error shutting down request: {} request={}".format(err, request))
             pass  # some platforms may raise ENOTCONN here
-        self.close_request(request)
+        finally:
+            self.close_request(request)
 
     def close_request(self, request):
-        """Called to clean up an individual request."""
         request.close()
         logging.info("Request is closed")
 
@@ -299,10 +272,6 @@ class SimpleResponseHandler():
              'Connection': 'keep-alive'
         }
         return ''.join(["%s: %s\r\n" % (key, headers[key]) for key in headers.keys()])
-
-
-
-
 
 
 if __name__ == "__main__":

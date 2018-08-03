@@ -49,8 +49,7 @@ class SimpleHttpServer(asyncore.dispatcher):
                 self.shutdown_request(request)
 
     def handle_close(self):
-        pass
-       # logging.info("Handle close")
+        logging.info("Handle close")
 
     def serve_forever(self):
         self.__is_working = False
@@ -176,7 +175,7 @@ class SimpleHttpHandler_1(asynchat.async_chat):
 
 class SimpleHttpHandler():
     def __init__(self, request, client_address, server):
-
+        #asynchat.async_chat.__init__(self, sock=request)
         self.client_address = client_address
         self.server = server
 
