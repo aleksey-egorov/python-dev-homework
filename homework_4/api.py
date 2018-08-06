@@ -193,7 +193,8 @@ class ClientsInterestsRequest(Request):
         if not self.client_ids == None:
             for client in self.client_ids.value:
                 try:
-                    results[client] = get_interests(store, client)
+                    store.set_mode('persistent')
+                    results[client] = get_interests(store.storage, client)
                 except Exception as error:
                     print ("clilent int except")
                     return {"message": self.err_msg(INTERNAL_ERROR, (), error.message)}, INTERNAL_ERROR
@@ -231,7 +232,8 @@ class OnlineScoreRequest(Request):
             score = 42
         else:
             try:
-                score = get_score(store, self.phone.value, self.email.value, self.birthday.value, self.gender.value,
+                store.set_mode('cache')
+                score = get_score(store.storage, self.phone.value, self.email.value, self.birthday.value, self.gender.value,
                                 self.first_name.value, self.last_name.value)
             except Exception as error:
                 return {"message" :  self.err_msg(INTERNAL_ERROR, (), error.message)}, INTERNAL_ERROR

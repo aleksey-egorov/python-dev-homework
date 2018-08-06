@@ -4,10 +4,6 @@ import datetime
 import random
 
 
-class ScoringError(Exception):
-    def __init__(self, error):
-        self.message = "Scoring error - {}".format(error)
-
 
 def get_score(store, phone, email, birthday=None, gender=None, first_name=None, last_name=None):
 
@@ -21,15 +17,14 @@ def get_score(store, phone, email, birthday=None, gender=None, first_name=None, 
     key_parts = [
         first_name or "",
         last_name or "",
-        #birthday.strftime("%Y%m%d") if birthday is not None else "",
         convert_birthday(birthday) or ""
     ]
     key = "uid:" + hashlib.md5("".join(key_parts).encode('utf-8')).hexdigest()
 
     # try get from cache,
     # fallback to heavy calculation in case of cache miss
-    store.set_mode('cache')
-    score = store.storage.get(key)
+
+    score = store.get(key)
     if score == None:
         score = 0
         if score:
@@ -43,7 +38,7 @@ def get_score(store, phone, email, birthday=None, gender=None, first_name=None, 
         if first_name and last_name:
             score += 0.5
         # cache for 60 minutes
-        store.storage.set(key, score,  60 * 60)
+        store.set(key, score,  60 * 60)
     else:
         score = float(score)
     return score
@@ -52,19 +47,18 @@ def get_score(store, phone, email, birthday=None, gender=None, first_name=None, 
 def get_interests(store, cid):
 
     key = "i:%s" % cid
-    store.set_mode('persistent')
-    inter_resp = store.storage.get(key)
+    inter_resp = store.get(key)
 
     if inter_resp == None:
         interests_list = ["cars", "pets", "travel", "hi-tech", "sport", "music", "books", "tv", "cinema", "geek", "otus"]
         interests = random.sample(interests_list, 2)
-        store.storage.set(key, json.dumps(interests))
+        store.set(key, json.dumps(interests))
     else:
         inter_str = inter_resp.decode('utf-8')
         try:
             interests = json.loads(inter_str)
         except Exception as err:
-            raise ScoringError(err)
+            raise api.ValidationError(err)
 
     return interests
 
