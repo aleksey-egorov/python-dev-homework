@@ -12,9 +12,9 @@
 
 Запуск сервиса на порту 8080 с файлом логов:
 
-    python3 api.py --port=8080 --log=api.log
+    python3.6 api.py --port=8080 --log=api.log
 
 Запуск тестирования:
 
-    python3 test.py
+    python3.6 test.py
 
