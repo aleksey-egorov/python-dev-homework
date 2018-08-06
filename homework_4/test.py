@@ -2,12 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-import functools
-import hashlib
-import datetime
-import requests
-import json
-import time
 
 import api
 from store import CacheStore, PersistentStore 
