@@ -366,4 +366,5 @@ if __name__ == "__main__":
         server.serve_forever()
     except KeyboardInterrupt:
         pass
-    server.server_close()
+    finally:
+        server.server_close()

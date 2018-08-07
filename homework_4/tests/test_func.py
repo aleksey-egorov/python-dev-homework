@@ -712,7 +712,7 @@ class TestFuncSuite(TestMethods):
             storage.set(key, case[key])
             val = storage.get(key)
         except Exception as error:
-            self.assertRegex(str(error), "Connection refused")
+            self.assertRegex(str(error), "Error")
 
     @cases([
         {"test": "test value"},

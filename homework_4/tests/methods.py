@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 import unittest
 import functools
@@ -13,8 +15,8 @@ def cases(cases):
     def decorator(f):
         @functools.wraps(f)
         def wrapper(*args):
-            for c in cases:
-                print("\n---\nFunction: {}, Case: {} ".format(f.__name__, c))
+            for i, c in enumerate(cases):
+                print("\n---\nFunction: {}, Case: {} ".format(f.__name__, i))
                 new_args = args + (c if isinstance(c, tuple) else (c,))
                 f(*new_args)
 
@@ -47,7 +49,7 @@ class TestMethods(unittest.TestCase):
         headers = {"Content-Type": "application/json",
                    "Content-Length": str(size)
                    }
-        req = requests.Request("post", "http://127.0.0.1:8080/method/", json=request, headers=headers)
+        req = requests.Request("post", "http://localhost:8080/method/", json=request, headers=headers)
         prep = req.prepare()
         resp = session.send(prep)
         response = json.loads(resp.text)
