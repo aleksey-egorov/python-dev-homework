@@ -19,9 +19,6 @@ class SimpleHttpServer(asyncore.dispatcher):
     def __init__(self, server_address, handler, worker=1, doc_root='./htdocs/', activate=True):
         super().__init__()
 
-        if not hasattr(socket, 'SO_REUSEPORT'):
-            socket.SO_REUSEPORT = 15
-
         self.server_address = server_address
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
@@ -67,10 +64,6 @@ class SimpleHttpServer(asyncore.dispatcher):
             self.__shutdown_request = False
             self.__is_working = False
 
-   # def shutdown(self):
-   #     self.__shutdown_request = True
-   #     self.__is_working = False
-
     def bind_server(self):
         logging.info("Bind: %s" % str(self.server_address))
         self.bind(self.server_address)
@@ -101,35 +94,6 @@ class SimpleHttpServer(asyncore.dispatcher):
     def close_request(self, request):
         self.handle_close()
         logging.info("Request is closed")
-
-
-class SimpleHttpHandler_new(asynchat.async_chat):
-    def __init__(self, request, client_address, server):
-        #super().__init__(sock=request)
-        asynchat.async_chat.__init__(self, sock=request)
-
-        self.client_address = client_address
-        self.server = server
-        self.set_terminator(b"\r\n\r\n")
-
-    def collect_incoming_data(self, data):
-        self._collect_incoming_data(data)
-
-    def found_terminator(self):
-        logging.info("foun term")
-        self.process_request()
-
-    def process_request(self):
-        request = self._get_data()
-        self.req_handler = SimpleRequestHandler(request, server)
-        content = self.req_handler.process_request()
-
-        self.resp_handler = SimpleResponseHandler(request, content)
-        result = self.resp_handler.send_response()
-        logging.info("Response result: code={}, body_length={}, content_type={}, send={}".format(
-            self.resp_handler.content['code'],
-            self.resp_handler.content['length'],
-            self.resp_handler.content['type'], result))
 
 
 class SimpleHttpHandler():
