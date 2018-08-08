@@ -22,7 +22,7 @@
 
     python3.6 httpd.py --port=8080 --worker=10 --root=./htdocs/ --log=httpd.log
 
-Запуск тестирования:
+Запуск unit-тестирования:
 
     python3.6 httptest.py
 
