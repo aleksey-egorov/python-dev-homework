@@ -25,4 +25,4 @@ COPY test.sh /home/work/
 COPY htdocs/ /home/work/htdocs/
 
 # run the application
-ENTRYPOINT ["sh", "start_noasync.sh"]
+ENTRYPOINT ["sh", "start_async.sh"]
