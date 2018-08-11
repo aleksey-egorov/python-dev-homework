@@ -25,7 +25,7 @@ def cases(cases):
     return decorator
 
 
-class TestMethods(unittest.TestCase):
+class TestMethods(object):
 
     def setUp(self):
         self.context = {}

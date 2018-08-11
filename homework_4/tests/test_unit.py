@@ -1,27 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import unittest
 from tests.methods import TestMethods, cases
 import api
 
-class TestUnitSuite(TestMethods):
-
-    ## Common tests
-    def test_unit_empty_request(self):
-        _, code = self.get_response({})
-        self.assertEqual(api.INVALID_REQUEST, code)
-
-    @cases([
-        {"account": "horns&hoofs", "arguments": {}},
-        {"account": "horns&hoofs", "login": "h&f"},
-        {"account": "h12324oofs", "methods": "online_score", "token": "", "arguments": {}},
-    ])
-    def test_unit_invalid_request(self, request):
-        _, code = self.get_response(request)
-        self.assertEqual(api.INVALID_REQUEST, code)
 
 
-    ## Account field tests
+class TestUnitFieldAccount(TestMethods, unittest.TestCase):
 
     @cases([
         {"account": None},
@@ -47,7 +33,7 @@ class TestUnitSuite(TestMethods):
             self.assertEqual(err.args[0], 'account')
 
 
-    ## Login field tests
+class TestUnitFieldLogin(TestMethods, unittest.TestCase):
 
     @cases([
         {"login": ""},
@@ -73,7 +59,7 @@ class TestUnitSuite(TestMethods):
             self.assertEqual(err.args[0], 'login')
 
 
-    ## Method field tests
+class TestUnitFieldMethod(TestMethods, unittest.TestCase):
 
     @cases([
         {"method": "online_score"},
@@ -100,7 +86,7 @@ class TestUnitSuite(TestMethods):
             self.assertEqual(err.args[0], 'method')
 
 
-    ## Token field tests
+class TestUnitFieldToken(TestMethods, unittest.TestCase):
 
     @cases([
         {"token": "fb2e72c45f284600abf73f77024716720fd5a74dd6d738ae4950026b605c34179e19777eb2bd701a75f3f01bc18eeff8fde7d7740852d979213ddcc3d1931265"},
@@ -126,7 +112,7 @@ class TestUnitSuite(TestMethods):
             self.assertEqual(err.args[0], 'token')
 
 
-    ## Arguments field tests
+class TestUnitFieldArguments(TestMethods, unittest.TestCase):
 
     @cases([
         {"arguments": {"phone": "71112223344"}},
@@ -152,7 +138,7 @@ class TestUnitSuite(TestMethods):
             self.assertEqual(err.args[0], 'arguments')
 
 
-    ## Phone field tests
+class TestUnitFieldPhone(TestMethods, unittest.TestCase):
 
     @cases([
          {"phone": "71112223344"},
@@ -180,7 +166,7 @@ class TestUnitSuite(TestMethods):
             self.assertEqual(err.args[0], 'phone')
 
 
-     ## Email field tests
+class TestUnitFieldEmail(TestMethods, unittest.TestCase):
 
     @cases([
         {"email": "123@3.ru"},
@@ -208,7 +194,7 @@ class TestUnitSuite(TestMethods):
             self.assertEqual(err.args[0], 'email')
 
 
-    ## Gender field tests
+class TestUnitFieldGender(TestMethods, unittest.TestCase):
 
     @cases([
         {"gender": None},
@@ -238,7 +224,7 @@ class TestUnitSuite(TestMethods):
             self.assertEqual(err.args[0], 'gender')
 
 
-    ## Birthday field tests
+class TestUnitFieldBirthday(TestMethods, unittest.TestCase):
 
     @cases([
         {"birthday": None},
@@ -270,7 +256,7 @@ class TestUnitSuite(TestMethods):
             self.assertEqual(err.args[0], 'birthday')
 
 
-    ## First name field tests
+class TestUnitFieldFirstname(TestMethods, unittest.TestCase):
 
     @cases([
         {"first_name": None},
@@ -297,7 +283,7 @@ class TestUnitSuite(TestMethods):
             self.assertEqual(err.args[0], 'first_name')
 
 
-    ## Last name field tests
+class TestUnitFieldLastname(TestMethods, unittest.TestCase):
 
     @cases([
         {"last_name": None},
@@ -324,7 +310,7 @@ class TestUnitSuite(TestMethods):
             self.assertEqual(err.args[0], 'last_name')
 
 
-    ## Client ID field tests
+class TestUnitFieldClientID(TestMethods, unittest.TestCase):
 
     @cases([
         {"client_ids": [1, 3, 4]},
@@ -352,7 +338,7 @@ class TestUnitSuite(TestMethods):
             self.assertEqual(err.args[0], 'client_ids')
 
 
-    ## Date field tests
+class TestUnitFieldDate(TestMethods, unittest.TestCase):
 
     @cases([
         {"date": None},

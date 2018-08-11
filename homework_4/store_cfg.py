@@ -1,3 +1,3 @@
-host = "localhost"
-password = "123"
+host = "35.202.142.218"
+password = "MaRZf4ZaAyzn"
 port = 6379
