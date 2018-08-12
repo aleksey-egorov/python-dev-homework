@@ -54,9 +54,12 @@ class TestFuncStore(TestMethods, unittest.TestCase):
     def test_func_invalid_cache_store(self, case):
         storage = CacheStore(host="localhost") # Попытка соединения с несуществующим хранилищем
         key = list(case.keys())[0]
-        storage.set(key, case[key], 60)
-        val = storage.get(key)
-        self.assertEqual(val, None)
+        try:
+            storage.set(key, case[key], 60)
+            val = storage.get(key)
+            self.assertEqual(val, None)
+        except:
+            print ("EXCEPTION BAD!!!!!!!!!!!!!")
 
     @cases([
         {"test": "test value"},
@@ -64,11 +67,14 @@ class TestFuncStore(TestMethods, unittest.TestCase):
     def test_func_invalid_persistent_store(self, case):
         storage = PersistentStore(host="localhost") # Попытка соединения с несуществующим хранилищем
         key = list(case.keys())[0]
+        val = None
         try:
             storage.set(key, case[key])
             val = storage.get(key)
         except:
             self.assertRaises(ConnectionError)
+        else:
+            self.assertEqual(val, case[key])  # Это вызовет ошибку теста если Exception не сработал
 
     @cases([
         {"test": "test value"},
