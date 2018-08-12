@@ -4,6 +4,7 @@
 import logging
 import datetime
 import os
+import re
 import mimetypes
 import multiprocessing
 import asyncore_epoll as asyncore
@@ -22,7 +23,7 @@ class SimpleHttpServer(asyncore.dispatcher):
         self.server_address = server_address
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-        self.RequestHandler = handler
+        self.request_handler = handler
         self.worker = worker
         self.doc_root = doc_root
 
@@ -36,17 +37,17 @@ class SimpleHttpServer(asyncore.dispatcher):
 
     def handle_accept(self):
         try:
-            request, client_address = self.accept()
+            conn, client_address = self.accept()
             logging.info("Recieved request from {}".format(client_address))
         except Exception as err:
             logging.error("Error getting request: {}".format(err))
             return
         try:
-            self.process_request(request, client_address)
+            self.process_request(conn, client_address)
         except Exception as err:
             logging.error("Error processing request: {}".format(err))
         finally:
-            self.shutdown_request(request)
+            self.shutdown_request(conn)
 
     def handle_close(self):
         logging.info("Handle close")
@@ -77,48 +78,37 @@ class SimpleHttpServer(asyncore.dispatcher):
         self.close()
         logging.info("Server is closed")
 
-    def process_request(self, request, client_address):
-        self.RequestHandler(request, client_address, self)
-        self.shutdown_request(request)
+    def process_request(self, conn, client_address):
+        self.request_handler(conn, client_address, self)
+        self.shutdown_request(conn)
 
-    def shutdown_request(self, request):
+    def shutdown_request(self, conn):
         try:
-            request.shutdown(socket.SHUT_WR)
+            conn.shutdown(socket.SHUT_WR)
             logging.info("Request is shut down")
         except Exception as err:
-            logging.error("Error shutting down request: {} request={}".format(err, request))
+            logging.error("Error shutting down request: {} request={}".format(err, conn))
             pass  # some platforms may raise ENOTCONN here
         finally:
-            self.close_request(request)
+            self.close_request(conn)
 
-    def close_request(self, request):
+    def close_request(self, conn):
         self.handle_close()
         logging.info("Request is closed")
 
 
-class SimpleHttpHandler():
-    def __init__(self, request, client_address, server):
-
-        self.client_address = client_address
-        self.server = server
-        self.reading_headers = True
-
-        self.req_handler = SimpleRequestHandler(request, server)
-        content = self.req_handler.process_request()
-
-        self.resp_handler = SimpleResponseHandler(request, content)
-        result = self.resp_handler.send_response()
-        logging.info("Response result: code={}, body_length={}, content_type={}, send={}".format(self.resp_handler.content['code'],
-                                                                                                 self.resp_handler.content['length'],
-                                                                                                 self.resp_handler.content['type'], result))
-
 class SimpleRequestHandler():
 
-    def __init__(self, request, server):
+    def __init__(self, conn, client_address, server, process=True):
         self.allowed_methods = ['GET', 'HEAD']
-        self.request = request
+        self.conn = conn
+        self.client_address = client_address
         self.server = server
         self.headers = {}
+
+        if process:
+            content = self.process_request()
+            result = self.make_response(conn, content)
 
     def process_request(self):
         self.read_request()
@@ -126,7 +116,13 @@ class SimpleRequestHandler():
         return self.handle_request()
 
     def read_request(self):
-        data = self.request.recv(1024)
+        data = bytes()
+        buf_size = 1024
+        while True:
+            chunk = self.conn.recv(buf_size)
+            data += chunk
+            if len(chunk) < buf_size:
+                break
         data = data.strip()
         self.data = data.decode("utf-8")
 
@@ -159,6 +155,7 @@ class SimpleRequestHandler():
         return {'code': 405}
 
     def parse_url(self, url):
+        valid_part = re.compile(r'([a-xzA-Z0-9\=\+\-\_\.\,]*?)')
         bad_parts = ['..', 'etc', 'passwd']
         parts = url.split("/")
         query_params = ""
@@ -166,7 +163,8 @@ class SimpleRequestHandler():
             fname, query_params = parts[-1].split("?")
             parts[-1] = fname
         for part in parts:
-            if part in bad_parts:
+            print ("part=", part)
+            if not valid_part.match(part) or part in bad_parts:
                 return None, None
         return parts, query_params
 
@@ -206,6 +204,14 @@ class SimpleRequestHandler():
             except Exception as err:
                 logging.error("Error getting request content: {}".format(err))
         return {'code': 404}
+
+    def make_response(self, request, content):
+        resp_handler = SimpleResponseHandler(request, content)
+        result = resp_handler.send_response()
+        logging.info("Response result: code={}, body_length={}, content_type={}, send={}".format(
+            resp_handler.content['code'],
+            resp_handler.content['length'],
+            resp_handler.content['type'], result))
 
 
 class SimpleResponseHandler():
@@ -255,7 +261,7 @@ class SimpleResponseHandler():
 
         response = headers + body
         try:
-            self.request.send(response)
+            self.request.sendall(response)
             return True
         except Exception as err:
             logging.error("Error while sending response: {}".format(err))
@@ -283,7 +289,7 @@ if __name__ == "__main__":
                         format='[%(asctime)s] %(levelname).1s %(message)s', datefmt='%Y.%m.%d %H:%M:%S')
     logging.info("Starting server at %s" % opts.port)
 
-    server = SimpleHttpServer(("localhost", opts.port), handler=SimpleHttpHandler, worker=opts.worker,
+    server = SimpleHttpServer(("localhost", opts.port), handler=SimpleRequestHandler, worker=opts.worker,
                               doc_root=opts.root)
     def run_server():
         try:
