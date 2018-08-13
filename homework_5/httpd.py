@@ -15,6 +15,7 @@ from urllib.parse import unquote
 valid_url_part = re.compile(r'([a-xzA-Z0-9\=\+\-\_\.\,]*?)')
 bad_url_exceptions = ['..', 'etc', 'passwd']
 
+
 class SimpleHttpServer():
     timeout = None
 
@@ -89,7 +90,6 @@ class SimpleHttpServer():
     def close_request(self, conn):
         conn.close()
         logging.info("Request is closed")
-
 
 
 class SimpleRequestHandler():
