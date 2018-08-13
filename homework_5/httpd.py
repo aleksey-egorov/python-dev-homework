@@ -15,12 +15,11 @@ from urllib.parse import unquote
 class SimpleHttpServer():
     timeout = None
 
-    def __init__(self, server_address, handler, worker=1, doc_root='./htdocs/', activate=True):
+    def __init__(self, server_address, handler, doc_root='./htdocs/', activate=True):
 
         self.server_address = server_address
         self.socket = socket(AF_INET, SOCK_STREAM)
         self.request_handler = handler
-        self.worker = worker
         self.doc_root = doc_root
 
         self.__shutdown_request = False
@@ -88,8 +87,6 @@ class SimpleHttpServer():
         conn.close()
         logging.info("Request is closed")
 
-    #def handle_error(self, request, client_address):
-    #    logging.error( request, client_address)
 
 
 class SimpleRequestHandler():
@@ -158,7 +155,6 @@ class SimpleRequestHandler():
             fname, query_params = parts[-1].split("?")
             parts[-1] = fname
         for part in parts:
-            print ("part=", part)
             if not valid_part.match(part) or part in bad_parts:
                 return None, None
         return parts, query_params
@@ -200,8 +196,8 @@ class SimpleRequestHandler():
                 logging.error("Error getting request content: {}".format(err))
         return {'code': 404}
 
-    def make_response(self, request, content):
-        resp_handler = SimpleResponseHandler(request, content)
+    def make_response(self, conn, content):
+        resp_handler = SimpleResponseHandler(conn, content)
         result = resp_handler.send_response()
         logging.info("Response result: code={}, body_length={}, content_type={}, send={}".format(
             resp_handler.content['code'],
@@ -211,8 +207,8 @@ class SimpleRequestHandler():
 
 class SimpleResponseHandler():
 
-    def __init__(self, request, content):
-        self.request = request
+    def __init__(self, conn, content):
+        self.conn = conn
         self.content = {}
         self.protocol = 'HTTP/1.1'
 
@@ -256,7 +252,7 @@ class SimpleResponseHandler():
 
         response = headers + body
         try:
-            self.request.sendall(response)
+            self.conn.sendall(response)
             return True
         except Exception as err:
             logging.error("Error while sending response: {}".format(err))
@@ -284,8 +280,7 @@ if __name__ == "__main__":
                         format='[%(asctime)s] %(levelname).1s %(message)s', datefmt='%Y.%m.%d %H:%M:%S')
     logging.info("Starting server at %s" % opts.port)
 
-    server = SimpleHttpServer(("localhost", opts.port), handler=SimpleRequestHandler, worker=opts.worker,
-                              doc_root=opts.root)
+    server = SimpleHttpServer(("localhost", opts.port), handler=SimpleRequestHandler, doc_root=opts.root)
     def run_server():
         try:
             server.serve_forever()
