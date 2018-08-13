@@ -11,7 +11,6 @@ import tests.test_acc as test_acc
 def start_tests():
 
     loader = unittest.TestLoader()
-    print ('starty')
 
     suite = loader.loadTestsFromModule(test_unit)
     suite.addTests(loader.loadTestsFromModule(test_func))
