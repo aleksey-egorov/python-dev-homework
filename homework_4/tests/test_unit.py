@@ -6,7 +6,6 @@ from tests.methods import TestMethods, cases
 import api
 
 
-
 class TestUnitFieldAccount(TestMethods, unittest.TestCase):
 
     @cases([

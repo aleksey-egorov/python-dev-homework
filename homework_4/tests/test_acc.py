@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import time
 import unittest
 from tests.methods import TestMethods, cases
 import api
+
 
 class TestAccCommon(TestMethods, unittest.TestCase):
 
