@@ -14,15 +14,11 @@ EXPOSE 8080
 
 WORKDIR /home/work
 
-COPY asyncore-original.py /home/work/
-COPY asyncore_epoll.py /home/work/
 COPY httpd.py /home/work/
-COPY httpd_noasync.py /home/work/
 COPY httptest.py /home/work/
-COPY start_async.sh /home/work/
-COPY start_noasync.sh /home/work/
+COPY start_httpd.sh /home/work/
 COPY test.sh /home/work/
 COPY htdocs/ /home/work/htdocs/
 
 # run the application
-ENTRYPOINT ["sh", "start_async.sh"]
+ENTRYPOINT ["sh", "start_httpd.sh"]

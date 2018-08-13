@@ -7,22 +7,18 @@ import os
 import re
 import mimetypes
 import multiprocessing
-import asyncore_epoll as asyncore
-import asynchat
 
 from optparse import OptionParser
-import socket
+from socket import socket, AF_INET, SOCK_STREAM, SHUT_WR
 from urllib.parse import unquote
 
-class SimpleHttpServer(asyncore.dispatcher):
+class SimpleHttpServer():
     timeout = None
 
     def __init__(self, server_address, handler, worker=1, doc_root='./htdocs/', activate=True):
-        super().__init__()
 
         self.server_address = server_address
-        self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        self.socket = socket(AF_INET, SOCK_STREAM)
         self.request_handler = handler
         self.worker = worker
         self.doc_root = doc_root
@@ -35,9 +31,19 @@ class SimpleHttpServer(asyncore.dispatcher):
             self.bind_server()
             self.activate_server()
 
-    def handle_accept(self):
+    def serve_forever(self):
+        self.__is_working = False
         try:
-            conn, client_address = self.accept()
+            while not self.__shutdown_request:
+                self.__is_working = True
+                self._handle_request_noblock()
+        finally:
+            self.__shutdown_request = False
+            self.__is_working = False
+
+    def _handle_request_noblock(self):
+        try:
+            conn, client_address = self.get_connection()
             logging.info("Recieved request from {}".format(client_address))
         except Exception as err:
             logging.error("Error getting request: {}".format(err))
@@ -49,42 +55,28 @@ class SimpleHttpServer(asyncore.dispatcher):
         finally:
             self.shutdown_request(conn)
 
-    def handle_close(self):
-        logging.info("Handle close")
-
-    def serve_forever(self):
-        self.__is_working = False
-        try:
-            while not self.__shutdown_request:
-                self.__is_working = True
-                try:
-                    asyncore.loop(timeout=1, use_poll=True, poller=asyncore.epoll_poller)
-                except OSError as err:
-                    logging.error("Error asyncore: {}".format(err))
-        finally:
-            self.__shutdown_request = False
-            self.__is_working = False
-
     def bind_server(self):
-        logging.info("Bind: %s" % str(self.server_address))
-        self.bind(self.server_address)
-        self.server_address = self.getsockname()
+        self.socket.bind(self.server_address)
+        self.server_address = self.socket.getsockname()
 
     def activate_server(self):
-        self.listen(self.request_queue_size)
+        self.socket.listen(self.request_queue_size)
         logging.info("Server is active ...")
 
     def close_server(self):
-        self.close()
+        self.socket.close()
         logging.info("Server is closed")
+
+    def get_connection(self):
+        accept = self.socket.accept()
+        return accept
 
     def process_request(self, conn, client_address):
         self.request_handler(conn, client_address, self)
-        self.shutdown_request(conn)
 
     def shutdown_request(self, conn):
         try:
-            conn.shutdown(socket.SHUT_WR)
+            conn.shutdown(SHUT_WR)
             logging.info("Request is shut down")
         except Exception as err:
             logging.error("Error shutting down request: {} request={}".format(err, conn))
@@ -93,8 +85,11 @@ class SimpleHttpServer(asyncore.dispatcher):
             self.close_request(conn)
 
     def close_request(self, conn):
-        self.handle_close()
+        conn.close()
         logging.info("Request is closed")
+
+    #def handle_error(self, request, client_address):
+    #    logging.error( request, client_address)
 
 
 class SimpleRequestHandler():
