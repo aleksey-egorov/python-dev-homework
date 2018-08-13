@@ -33,7 +33,7 @@
 
 ### Нагрузочное тестирование
 
-Результаты тестирования асинхронного сервера (в контейнере Docker)
+Результаты тестирования сервера (в контейнере Docker)
 
     Server Software:        simple-http-server
     Server Hostname:        localhost
