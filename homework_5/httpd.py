@@ -12,6 +12,9 @@ from optparse import OptionParser
 from socket import socket, AF_INET, SOCK_STREAM, SHUT_WR
 from urllib.parse import unquote
 
+valid_url_part = re.compile(r'([a-xzA-Z0-9\=\+\-\_\.\,]*?)')
+bad_url_exceptions = ['..', 'etc', 'passwd']
+
 class SimpleHttpServer():
     timeout = None
 
@@ -147,15 +150,13 @@ class SimpleRequestHandler():
         return {'code': 405}
 
     def parse_url(self, url):
-        valid_part = re.compile(r'([a-xzA-Z0-9\=\+\-\_\.\,]*?)')
-        bad_parts = ['..', 'etc', 'passwd']
         parts = url.split("/")
         query_params = ""
         if "?" in parts[-1]:
             fname, query_params = parts[-1].split("?")
             parts[-1] = fname
         for part in parts:
-            if not valid_part.match(part) or part in bad_parts:
+            if not valid_url_part.match(part) or part in bad_url_exceptions:
                 return None, None
         return parts, query_params
 
