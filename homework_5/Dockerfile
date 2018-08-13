@@ -3,8 +3,6 @@ FROM centos
 
 MAINTAINER Aleksey Egorov
 
-#ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
-
 RUN yum -y -q install epel-release
 RUN yum -y -q install python36
 RUN yum -y -q install httpd-tools
