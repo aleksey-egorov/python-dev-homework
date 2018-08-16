@@ -101,16 +101,13 @@ class LogisticRegression:
         # Hint: It might be helpful to use np.vstack and np.sum                   #
         ###########################################################################
 
+        X_np = X.toarray(order='C')
         w = self.w.reshape(-1, 1)
-       # X_np = np.array(X)
-        print ("w=", w.shape, type(w))
-        print ("x=", X.shape, type(X))
 
-       # print("w[0]=", self.w[0])
-        #print("x[0]=", X[0])
+        #print ("w=", w.shape, type(w))
+        #print ("x=", X_np.shape, type(X_np))
 
-        y_proba = np.matmul(X, w)
-        print ('y_proba=', y_proba.shape)
+        y_proba = np.matmul(X_np, w)
 
         ###########################################################################
         #                           END OF YOUR CODE                              #
@@ -135,7 +132,7 @@ class LogisticRegression:
         # Implement this method. Store the predicted labels in y_pred.            #
         ###########################################################################
         y_proba = self.predict_proba(X, append_bias=False)
-        y_pred = 1
+        y_pred = 1/(1 + np.exp(-y_proba))
 
         ###########################################################################
         #                           END OF YOUR CODE                              #
@@ -157,7 +154,8 @@ class LogisticRegression:
         # Compute loss and gradient. Your code should not contain python loops.
 
         num_train, dim = X_batch.shape
-        loss = (- 1/num_train) * (y_batch * np.log(self.predict(X_batch)) + (1 - y_batch) * np.log(1 - self.predict(X_batch)))
+        pred = self.predict(X_batch)
+        loss = (- 1/num_train) * (y_batch * np.log(pred) + (1 - y_batch) * np.log(1 - pred))
 
         # Right now the loss is a sum over all training examples, but we want it
         # to be an average instead so we divide by num_train.
@@ -166,7 +164,9 @@ class LogisticRegression:
 
         # Add regularization to the loss and gradient.
         # Note that you have to exclude bias term in regularization.
-
+        dw = np.dot((pred - y_batch), X_batch)
+        print("dw=", dw.shape)
+        print ("pred=", pred.shape)
 
         return loss, dw
 
