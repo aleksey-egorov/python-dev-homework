@@ -101,13 +101,15 @@ class LogisticRegression:
         # Hint: It might be helpful to use np.vstack and np.sum                   #
         ###########################################################################
 
-        #print ("w=", self.w.shape)
-        #print ("x=", X.shape)
+        w = self.w.reshape(-1, 1)
+       # X_np = np.array(X)
+        print ("w=", w.shape, type(w))
+        print ("x=", X.shape, type(X))
 
        # print("w[0]=", self.w[0])
         #print("x[0]=", X[0])
 
-        y_proba =  np.dot(X, self.w)
+        y_proba = np.matmul(X, w)
         print ('y_proba=', y_proba.shape)
 
         ###########################################################################
