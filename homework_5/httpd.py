@@ -39,12 +39,12 @@ class SimpleHttpServer():
         try:
             while not self.__shutdown_request:
                 self.__is_working = True
-                self._handle_request_noblock()
+                self._handle_request()
         finally:
             self.__shutdown_request = False
             self.__is_working = False
 
-    def _handle_request_noblock(self):
+    def _handle_request(self):
         try:
             conn, client_address = self.get_connection()
             logging.info("Recieved request from {}".format(client_address))
@@ -113,10 +113,11 @@ class SimpleRequestHandler():
     def read_request(self):
         data = bytes()
         buf_size = 1024
+        delimiter = b'\r\n\r\n'
         while True:
             chunk = self.conn.recv(buf_size)
             data += chunk
-            if len(chunk) < buf_size:
+            if delimiter in chunk:
                 break
         data = data.strip()
         self.data = data.decode("utf-8")
@@ -162,29 +163,31 @@ class SimpleRequestHandler():
 
     def do_head(self):
         url_parts, query_params = self.parse_url(self.headers['url'])
-        content = self.get_content(url_parts)
-        content['body'] = None
-        return content
+        return  self.get_content(url_parts, read_body=False)
 
     def do_get(self):
         url_parts, query_params = self.parse_url(self.headers['url'])
         return self.get_content(url_parts)
 
-    def get_content(self, url_parts):
+    def get_content(self, url_parts, read_body=True):
         if url_parts == None:
             return {'code': 400}
-        path = os.path.join(self.server.doc_root, *url_parts)
+        path = os.path.abspath(os.path.join(self.server.doc_root, *url_parts))
         if os.path.exists(path):
+            if os.path.isfile(path) and url_parts[-1] == '': # Если файл был найден, но в url после имени файла стоял слэш - возвращаем ошибку
+                return {'code': 404}
             if os.path.isdir(path):
                 path = os.path.join(path, 'index.html')
             try:
-                body = bytes()
-                with open(path, 'rb') as file:
-                    while True:
-                        chunk = file.read(4096)
-                        if not chunk:
-                            break
-                        body += chunk
+                body = None
+                if read_body:
+                    body = bytes()
+                    with open(path, 'rb') as file:
+                        while True:
+                            chunk = file.read(4096)
+                            if not chunk:
+                                break
+                            body += chunk
 
                 content = {
                     'body': body,
