@@ -14,7 +14,7 @@ class TestUnitFieldAccount(TestMethods, unittest.TestCase):
         {"account": "-1"},
         {"account": "1234"},
     ])
-    def test_unit_ok_account_field(self, case):
+    def test_ok_account_field(self, case):
         method = api.MethodRequest()
         method.account.set(case['account'])
         self.assertEqual(case['account'], method.account.value)
@@ -24,7 +24,7 @@ class TestUnitFieldAccount(TestMethods, unittest.TestCase):
         {"account": {1, 2}},
         {"account": ['123', '234']},
     ])
-    def test_unit_bad_account_field(self, case):
+    def test_bad_account_field(self, case):
         method = api.MethodRequest()
         try:
             method.account.set(case['account'])
@@ -39,7 +39,7 @@ class TestUnitFieldLogin(TestMethods, unittest.TestCase):
         {"login": "-1"},
         {"login": "12341"},
     ])
-    def test_unit_ok_login_field(self, case):
+    def test_ok_login_field(self, case):
         method = api.MethodRequest()
         method.login.set(case['login'])
         self.assertEqual(case['login'], method.login.value)
@@ -50,7 +50,7 @@ class TestUnitFieldLogin(TestMethods, unittest.TestCase):
         {"login": {4, 5}},
         {"login": [7, 56]},
     ])
-    def test_unit_bad_login_field(self, case):
+    def test_bad_login_field(self, case):
         method = api.MethodRequest()
         try:
             method.login.set(case['login'])
@@ -65,7 +65,7 @@ class TestUnitFieldMethod(TestMethods, unittest.TestCase):
         {"method": "clients_interests"},
         {"method": "unknown"},
     ])
-    def test_unit_ok_method_field(self, case):
+    def test_ok_method_field(self, case):
         method = api.MethodRequest()
         method.method.set(case['method'])
         self.assertEqual(case['method'], method.method.value)
@@ -77,7 +77,7 @@ class TestUnitFieldMethod(TestMethods, unittest.TestCase):
         {"method": {4, 5}},
         {"method": [7, 56]},
     ])
-    def test_unit_bad_method_field(self, case):
+    def test_bad_method_field(self, case):
         method = api.MethodRequest()
         try:
             method.method.set(case['method'])
@@ -92,7 +92,7 @@ class TestUnitFieldToken(TestMethods, unittest.TestCase):
         {"token": ""},
         {"token": "unknown"},
     ])
-    def test_unit_ok_token_field(self, case):
+    def test_ok_token_field(self, case):
         method = api.MethodRequest()
         method.token.set(case['token'])
         self.assertEqual(case['token'], method.token.value)
@@ -103,7 +103,7 @@ class TestUnitFieldToken(TestMethods, unittest.TestCase):
         {"token": {4, 5}},
         {"token": [7, 56]},
     ])
-    def test_unit_bad_token_field(self, case):
+    def test_bad_token_field(self, case):
         method = api.MethodRequest()
         try:
             method.token.set(case['token'])
@@ -116,7 +116,7 @@ class TestUnitFieldArguments(TestMethods, unittest.TestCase):
     @cases([
         {"arguments": {"phone": "71112223344"}},
     ])
-    def test_unit_ok_arguments_field(self, case):
+    def test_ok_arguments_field(self, case):
         method = api.MethodRequest()
         method.arguments.set(case['arguments'])
         self.assertEqual(case['arguments'], method.arguments.value)
@@ -129,7 +129,7 @@ class TestUnitFieldArguments(TestMethods, unittest.TestCase):
         {"arguments": "unknown"},
         {"arguments": [7, 56]},
     ])
-    def test_unit_bad_arguments_field(self, case):
+    def test_bad_arguments_field(self, case):
         method = api.MethodRequest()
         try:
             method.arguments.set(case['arguments'])
@@ -145,7 +145,7 @@ class TestUnitFieldPhone(TestMethods, unittest.TestCase):
          {"phone": ""},
          {"phone": None},
     ])
-    def test_unit_ok_phone_field(self, case):
+    def test_ok_phone_field(self, case):
          method = api.OnlineScoreRequest()
          method.phone.set(case['phone'])
          self.assertEqual(case['phone'], method.phone.value)
@@ -157,7 +157,7 @@ class TestUnitFieldPhone(TestMethods, unittest.TestCase):
         {"phone": ["71112223344"]},
         {"phone": {}},
     ])
-    def test_unit_bad_phone_field(self, case):
+    def test_bad_phone_field(self, case):
         method = api.OnlineScoreRequest()
         try:
             method.phone.set(case['phone'])
@@ -174,7 +174,7 @@ class TestUnitFieldEmail(TestMethods, unittest.TestCase):
         {"email": ""},
         {"email": "@123.ru"},
     ])
-    def test_unit_ok_email_field(self, case):
+    def test_ok_email_field(self, case):
          method = api.OnlineScoreRequest()
          method.email.set(case['email'])
          self.assertEqual(case['email'], method.email.value)
@@ -185,7 +185,7 @@ class TestUnitFieldEmail(TestMethods, unittest.TestCase):
         {"email": ["71112223344"]},
         {"email": {}},
     ])
-    def test_unit_bad_email_field(self, case):
+    def test_bad_email_field(self, case):
         method = api.OnlineScoreRequest()
         try:
             method.email.set(case['email'])
@@ -202,7 +202,7 @@ class TestUnitFieldGender(TestMethods, unittest.TestCase):
         {"gender": 1},
         {"gender": 2}
     ])
-    def test_unit_ok_gender_field(self, case):
+    def test_ok_gender_field(self, case):
         method = api.OnlineScoreRequest()
         method.gender.set(case['gender'])
         self.assertEqual(case['gender'], method.gender.value)
@@ -215,7 +215,7 @@ class TestUnitFieldGender(TestMethods, unittest.TestCase):
         {"gender": ["71112223344"]},
         {"gender": {}},
     ])
-    def test_unit_bad_gender_field(self, case):
+    def test_bad_gender_field(self, case):
         method = api.OnlineScoreRequest()
         try:
             method.gender.set(case['gender'])
@@ -232,7 +232,7 @@ class TestUnitFieldBirthday(TestMethods, unittest.TestCase):
         {"birthday": "01.03.2000"},
         {"birthday": "12.12.1950"},
     ])
-    def test_unit_ok_birthday_field(self, case):
+    def test_ok_birthday_field(self, case):
         method = api.OnlineScoreRequest()
         method.birthday.set(case['birthday'])
         self.assertEqual(case['birthday'], method.birthday.value)
@@ -247,7 +247,7 @@ class TestUnitFieldBirthday(TestMethods, unittest.TestCase):
         {"birthday": "01.01.1900"},
         {"birthday": "11.11.1920"},
     ])
-    def test_unit_bad_birthday_field(self, case):
+    def test_bad_birthday_field(self, case):
         method = api.OnlineScoreRequest()
         try:
             method.birthday.set(case['birthday'])
@@ -263,7 +263,7 @@ class TestUnitFieldFirstname(TestMethods, unittest.TestCase):
         {"first_name": "Ivan"},
         {"first_name": "Ivan2 test"},
     ])
-    def test_unit_ok_firstname_field(self, case):
+    def test_ok_firstname_field(self, case):
         method = api.OnlineScoreRequest()
         method.first_name.set(case['first_name'])
         self.assertEqual(case['first_name'], method.first_name.value)
@@ -274,7 +274,7 @@ class TestUnitFieldFirstname(TestMethods, unittest.TestCase):
         {"first_name": ["71112223344"]},
         {"first_name": {}},
     ])
-    def test_unit_bad_firstname_field(self, case):
+    def test_bad_firstname_field(self, case):
         method = api.OnlineScoreRequest()
         try:
             method.first_name.set(case['first_name'])
@@ -290,7 +290,7 @@ class TestUnitFieldLastname(TestMethods, unittest.TestCase):
         {"last_name": "Petrov"},
         {"last_name": "Ivan2 test"},
     ])
-    def test_unit_ok_lastname_field(self, case):
+    def test_ok_lastname_field(self, case):
         method = api.OnlineScoreRequest()
         method.last_name.set(case['last_name'])
         self.assertEqual(case['last_name'], method.last_name.value)
@@ -301,7 +301,7 @@ class TestUnitFieldLastname(TestMethods, unittest.TestCase):
         {"last_name": ["71112223344"]},
         {"last_name": {}},
     ])
-    def test_unit_bad_lastname_field(self, case):
+    def test_bad_lastname_field(self, case):
         method = api.OnlineScoreRequest()
         try:
             method.last_name.set(case['last_name'])
@@ -315,7 +315,7 @@ class TestUnitFieldClientID(TestMethods, unittest.TestCase):
         {"client_ids": [1, 3, 4]},
         {"client_ids": [0]},
     ])
-    def test_unit_ok_clientid_field(self, case):
+    def test_ok_clientid_field(self, case):
         method = api.ClientsInterestsRequest()
         method.client_ids.set(case['client_ids'])
         self.assertEqual(case['client_ids'], method.client_ids.value)
@@ -329,7 +329,7 @@ class TestUnitFieldClientID(TestMethods, unittest.TestCase):
         {"client_ids": []},
         {"client_ids": [-2]},
     ])
-    def test_unit_bad_clientid_field(self, case):
+    def test_bad_clientid_field(self, case):
         method = api.ClientsInterestsRequest()
         try:
             method.client_ids.set(case['client_ids'])
@@ -345,7 +345,7 @@ class TestUnitFieldDate(TestMethods, unittest.TestCase):
         {"date": "08.07.2017"},
         {"date": "08.07.1917"},
     ])
-    def test_unit_ok_date_field(self, case):
+    def test_ok_date_field(self, case):
         method = api.ClientsInterestsRequest()
         method.date.set(case['date'])
         self.assertEqual(case['date'], method.date.value)
@@ -359,7 +359,7 @@ class TestUnitFieldDate(TestMethods, unittest.TestCase):
         {"date": "08/07/2017"},
         {"date": "2008.07.17"},
     ])
-    def test_unit_bad_date_field(self, case):
+    def test_bad_date_field(self, case):
         method = api.ClientsInterestsRequest()
         try:
             method.date.set(case['date'])

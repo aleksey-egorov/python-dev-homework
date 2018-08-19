@@ -48,11 +48,11 @@ class PersistentStore():
     def set(self, key, value):
         try:
             return self.conn.set(key, value)
-        except Exception as err:
-            raise
+        except:
+            raise ConnectionError
 
     def get(self, key):
         try:
             return self.conn.get(key)
-        except Exception as err:
-            raise
+        except:
+            raise ConnectionError

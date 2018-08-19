@@ -10,7 +10,7 @@ import api
 
 class TestFuncCommon(TestMethods, unittest.TestCase):
 
-    def test_func_empty_request(self):
+    def test_empty_request(self):
         _, code = self.get_response({})
         self.assertEqual(api.INVALID_REQUEST, code)
 
@@ -19,7 +19,7 @@ class TestFuncCommon(TestMethods, unittest.TestCase):
         {"account": "horns&hoofs", "login": "h&f"},
         {"account": "h12324oofs", "methods": "online_score", "token": "", "arguments": {}},
     ])
-    def test_func_invalid_request(self, request):
+    def test_invalid_request(self, request):
         _, code = self.get_response(request)
         self.assertEqual(api.INVALID_REQUEST, code)
 
@@ -30,7 +30,7 @@ class TestFuncStore(TestMethods, unittest.TestCase):
         {"test": "test value"},
         {"test": "Тестовое значение"},
     ])
-    def test_func_ok_cache_store(self, case):
+    def test_ok_cache_store(self, case):
         storage = CacheStore()
         key = list(case.keys())[0]
         storage.set(key, case[key], 60)
@@ -41,7 +41,7 @@ class TestFuncStore(TestMethods, unittest.TestCase):
         {"test": "test value"},
         {"test": "Тестовое значение"},
     ])
-    def test_func_ok_persistent_store(self, case):
+    def test_ok_persistent_store(self, case):
         storage = PersistentStore()
         key = list(case.keys())[0]
         storage.set(key, case[key])
@@ -51,7 +51,7 @@ class TestFuncStore(TestMethods, unittest.TestCase):
     @cases([
         {"test": "test value"},
     ])
-    def test_func_invalid_cache_store(self, case):
+    def test_invalid_cache_store(self, case):
         storage = CacheStore(host="localhost") # Попытка соединения с несуществующим хранилищем
         key = list(case.keys())[0]
         storage.set(key, case[key], 60)
@@ -61,7 +61,7 @@ class TestFuncStore(TestMethods, unittest.TestCase):
     @cases([
         {"test": "test value"},
     ])
-    def test_func_invalid_persistent_store(self, case):
+    def test_invalid_persistent_store(self, case):
         storage = PersistentStore(host="localhost") # Попытка соединения с несуществующим хранилищем
         key = list(case.keys())[0]
         val = None
@@ -76,7 +76,7 @@ class TestFuncStore(TestMethods, unittest.TestCase):
     @cases([
         {"test": "test value"},
     ])
-    def test_func_expired_cache_store(self, case):
+    def test_expired_cache_store(self, case):
         storage = CacheStore()
         key = list(case.keys())[0]
         storage.set(key, case[key], 1) # Записываем значение с минимальным сроком хранения - 1 сек
@@ -98,7 +98,7 @@ class TestFuncAuth(TestMethods, unittest.TestCase):
          "method": "clients_interests",
          "arguments": {"client_ids": [6, 7], "date": "20.07.2017"}},
     ])
-    def test_func_bad_auth(self, request):
+    def test_bad_auth(self, request):
         response, code = self.get_response(request)
         self.assertEqual(api.FORBIDDEN, code)
         self.assertRegex(response.get("message"), api.FIELD_REQUEST_ERRORS[api.REQUEST_AUTH_ERROR])
@@ -120,7 +120,7 @@ class TestFuncSpecificFields(TestMethods, unittest.TestCase):
          "method": "online_score",
          "arguments": {"email": "123@3.ru", "gender": 1}},
     ])
-    def test_func_argument_pairs(self, request):
+    def test_argument_pairs(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.INVALID_REQUEST, code)
@@ -134,7 +134,7 @@ class TestFuncCalculations(TestMethods, unittest.TestCase):
         {"account": "horns&hoofs", "login": "h&f", "method": "online_score",
          "arguments": {"gender": 1, "birthday": "01.01.2000"}},
     ])
-    def test_func_online_score(self, request):
+    def test_online_score(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.OK, code)
@@ -145,7 +145,7 @@ class TestFuncCalculations(TestMethods, unittest.TestCase):
         {"account": "horns&hoofs", "login": "h&f", "method": "clients_interests",
          "arguments": {"client_ids": [1, 2]}},
     ])
-    def test_func_client_interests(self, request):
+    def test_client_interests(self, request):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.OK, code)
