@@ -49,12 +49,9 @@ class LogisticRegression:
             #########################################################################
             ids = np.arange(y.size)
             idx = np.random.choice(ids, size=batch_size, replace=False)
-            #print ('idx=', idx.shape, idx)
 
-            print('X=', X.shape)
             y_batch = y[idx]
             X_batch = X[idx]
-            print('X_batch=', X_batch.shape, ' Y=', y_batch.shape )
 
             #########################################################################
             #                       END OF YOUR CODE                                #
@@ -63,13 +60,14 @@ class LogisticRegression:
             # evaluate loss and gradient
             loss, gradW = self.loss(X_batch, y_batch, reg)
             self.loss_history.append(loss)
+
             # perform parameter update
             #########################################################################
             # TODO:                                                                 #
             # Update the weights using the gradient and the learning rate.          #
             #########################################################################
 
-           # self.w += gradW
+            self.w -= learning_rate * gradW
 
             #########################################################################
             #                       END OF YOUR CODE                                #
@@ -101,13 +99,8 @@ class LogisticRegression:
         # Hint: It might be helpful to use np.vstack and np.sum                   #
         ###########################################################################
 
-        X_np = X.toarray(order='C')
         w = self.w.reshape(-1, 1)
-
-        #print ("w=", w.shape, type(w))
-        #print ("x=", X_np.shape, type(X_np))
-
-        y_proba = np.matmul(X_np, w)
+        y_proba = X @ w
 
         ###########################################################################
         #                           END OF YOUR CODE                              #
@@ -131,8 +124,9 @@ class LogisticRegression:
         # TODO:                                                                   #
         # Implement this method. Store the predicted labels in y_pred.            #
         ###########################################################################
-        y_proba = self.predict_proba(X, append_bias=False)
-        y_pred = 1/(1 + np.exp(-y_proba))
+        y_proba = self.predict_proba(X, append_bias=True)
+        y_act = 1/(1 + np.exp(-y_proba))
+        y_pred = np.where(y_act < 0.5, 0, 1)
 
         ###########################################################################
         #                           END OF YOUR CODE                              #
@@ -151,22 +145,40 @@ class LogisticRegression:
         """
         dw = np.zeros_like(self.w)  # initialize the gradient as zero
         loss = 0
+
         # Compute loss and gradient. Your code should not contain python loops.
 
         num_train, dim = X_batch.shape
-        pred = self.predict(X_batch)
-        loss = (- 1/num_train) * (y_batch * np.log(pred) + (1 - y_batch) * np.log(1 - pred))
+
+        X_np = X_batch.toarray(order='C')
+        y_proba = self.predict_proba(X_batch, append_bias=False)
+        y_hat = 1/(1 + np.exp(-y_proba))
+
+        yb =  y_batch.reshape(-1, 1)
+        s1 = yb * np.log(y_hat)
+        s2 = (1 - yb) * np.log(1 - y_hat)
 
         # Right now the loss is a sum over all training examples, but we want it
         # to be an average instead so we divide by num_train.
         # Note that the same thing must be done with gradient.
 
+        loss = - np.sum(s1 + s2) / num_train
 
         # Add regularization to the loss and gradient.
         # Note that you have to exclude bias term in regularization.
-        dw = np.dot((pred - y_batch), X_batch)
-        print("dw=", dw.shape)
-        print ("pred=", pred.shape)
+
+        w_nobias = self.w
+        w_nobias[-1] = 0
+        loss += (reg / (2*num_train)) * np.sum(np.power(w_nobias, 2))
+
+        # Calculating gradient
+        df = y_hat - yb
+        summ = np.multiply(X_np, df)
+        summ = np.sum(summ, axis=0)
+        dw = (1/num_train) * summ
+
+        if reg > 0:
+            dw += (reg / num_train) * w_nobias
 
         return loss, dw
 
