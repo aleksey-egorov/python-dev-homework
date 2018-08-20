@@ -179,6 +179,7 @@ class SimpleRequestHandler():
                 return {'code': 404}
             if os.path.isdir(path):
                 path = os.path.join(path, 'index.html')
+
             try:
                 body = None
                 if read_body:
