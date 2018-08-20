@@ -174,7 +174,8 @@ class SimpleRequestHandler():
             return {'code': 400}
         path = os.path.abspath(os.path.join(self.server.doc_root, *url_parts))
         if os.path.exists(path):
-            if os.path.isfile(path) and url_parts[-1] == '': # Если файл был найден, но в url после имени файла стоял слэш - возвращаем ошибку
+            # Если файл был найден, но в url после имени файла стоял слэш - возвращаем ошибку
+            if os.path.isfile(path) and url_parts[-1] == '':
                 return {'code': 404}
             if os.path.isdir(path):
                 path = os.path.join(path, 'index.html')
