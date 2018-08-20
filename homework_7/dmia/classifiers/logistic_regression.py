@@ -177,6 +177,7 @@ class LogisticRegression:
         summ = np.sum(summ, axis=0)
         dw = (1/num_train) * summ
 
+        # Gradient regularization
         if reg > 0:
             dw += (reg / num_train) * w_nobias
 
