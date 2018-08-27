@@ -100,7 +100,9 @@ class LogisticRegression:
         ###########################################################################
 
         w = self.w.reshape(-1, 1)
-        y_proba = X @ w
+        y_hat = X @ w
+
+        y_proba = self.sigmoid(y_hat)
 
         ###########################################################################
         #                           END OF YOUR CODE                              #
@@ -125,8 +127,7 @@ class LogisticRegression:
         # Implement this method. Store the predicted labels in y_pred.            #
         ###########################################################################
         y_proba = self.predict_proba(X, append_bias=True)
-        y_act = 1/(1 + np.exp(-y_proba))
-        y_pred = np.where(y_act < 0.5, 0, 1)
+        y_pred = np.where(y_proba < 0.5, 0, 1)
 
         ###########################################################################
         #                           END OF YOUR CODE                              #
@@ -149,14 +150,11 @@ class LogisticRegression:
         # Compute loss and gradient. Your code should not contain python loops.
 
         num_train, dim = X_batch.shape
-
-        X_np = X_batch.toarray(order='C')
         y_proba = self.predict_proba(X_batch, append_bias=False)
-        y_hat = 1/(1 + np.exp(-y_proba))
 
         yb =  y_batch.reshape(-1, 1)
-        s1 = yb * np.log(y_hat)
-        s2 = (1 - yb) * np.log(1 - y_hat)
+        s1 = yb * np.log(y_proba)
+        s2 = (1 - yb) * np.log(1 - y_proba)
 
         # Right now the loss is a sum over all training examples, but we want it
         # to be an average instead so we divide by num_train.
@@ -167,22 +165,28 @@ class LogisticRegression:
         # Add regularization to the loss and gradient.
         # Note that you have to exclude bias term in regularization.
 
-        w_nobias = self.w
+        w_nobias = self.w.reshape(-1, 1)
         w_nobias[-1] = 0
         loss += (reg / (2*num_train)) * np.sum(np.power(w_nobias, 2))
 
         # Calculating gradient
-        df = y_hat - yb
-        summ = np.multiply(X_np, df)
-        summ = np.sum(summ, axis=0)
+        df = y_proba - yb
+        #summ = np.multiply(X_batch.toarray(), df)
+        summ = X_batch.transpose().dot(df)
+        #summ = np.sum(summ, axis=0)
         dw = (1/num_train) * summ
 
         # Gradient regularization
         if reg > 0:
             dw += (reg / num_train) * w_nobias
 
+        dw = dw.reshape(-1, )
+
         return loss, dw
 
     @staticmethod
     def append_biases(X):
         return sparse.hstack((X, np.ones(X.shape[0])[:, np.newaxis])).tocsr()
+
+    def sigmoid(self, x):
+        return 1 / (1 + np.exp(-x))
