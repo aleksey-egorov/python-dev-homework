@@ -171,9 +171,7 @@ class LogisticRegression:
 
         # Calculating gradient
         df = y_proba - yb
-        #summ = np.multiply(X_batch.toarray(), df)
         summ = X_batch.transpose().dot(df)
-        #summ = np.sum(summ, axis=0)
         dw = (1/num_train) * summ
 
         # Gradient regularization
