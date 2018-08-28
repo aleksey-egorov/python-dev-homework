@@ -117,7 +117,7 @@ class SimpleRequestHandler():
         while True:
             chunk = self.conn.recv(buf_size)
             data += chunk
-            if delimiter in chunk:
+            if delimiter in data:
                 break
         data = data.strip()
         self.data = data.decode("utf-8")
@@ -183,13 +183,7 @@ class SimpleRequestHandler():
             try:
                 body = None
                 if read_body:
-                    body = bytes()
-                    with open(path, 'rb') as file:
-                        while True:
-                            chunk = file.read(4096)
-                            if not chunk:
-                                break
-                            body += chunk
+                    body = self.read_body(path)
 
                 content = {
                     'body': body,
@@ -201,6 +195,16 @@ class SimpleRequestHandler():
             except Exception as err:
                 logging.error("Error getting request content: {}".format(err))
         return {'code': 404}
+
+    def read_body(self, path):
+        body = bytes()
+        with open(path, 'rb') as file:
+            while True:
+                chunk = file.read(4096)
+                if not chunk:
+                    break
+                body += chunk
+        return body
 
     def make_response(self, conn, content):
         resp_handler = SimpleResponseHandler(conn, content)
