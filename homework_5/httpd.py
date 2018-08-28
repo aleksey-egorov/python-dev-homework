@@ -223,14 +223,11 @@ class SimpleResponseHandler():
         self.protocol = 'HTTP/1.1'
 
         self.statuses = {
-            200: ('OK', 'Request complete, response send'),
-            400: ('Bad Request',
-                  'Bad request syntax'),
-            403: ('Forbidden',
-                  'Request forbidden'),
-            404: ('Not Found', 'Document not found by given URI'),
-            405: ('Method Not Allowed',
-                  'Specified method is invalid'),
+            200: 'OK',
+            400: 'Bad Request',
+            403: 'Forbidden',
+            404: 'Not Found',
+            405: 'Method Not Allowed',
         }
         self.check_content(content)
 
