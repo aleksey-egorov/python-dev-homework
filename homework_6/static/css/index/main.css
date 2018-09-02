@@ -1,0 +1,37 @@
+
+
+#questions_ul {
+    list-style: none;
+}
+
+#questions_ul > li.main{
+    display:block;
+    border-bottom:1px solid #aaa;
+}
+
+#questions_ul .list_content {
+    height:70px;
+    list-style:none;
+}
+#questions_ul .list_content > li{
+    float:left;
+    font-size:0.8em;
+    padding-top:20px;
+    text-align:center;
+}
+
+#questions_ul .list_content > li .tags{
+    display:block
+}
+
+#questions_ul .list_content > li .quest_cnt{
+    text-align:left;
+    padding-left:20px;
+}
+
+#questions_ul a.head {
+    font-size:1.2em;
+}
+#questions_ul .digit {
+    font-size:1.2em;
+}

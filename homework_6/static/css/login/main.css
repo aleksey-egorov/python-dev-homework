@@ -1,0 +1,38 @@
+#login_content {
+    display:block;
+    padding:0px;
+    margin:0px;
+}
+
+#login_content input {
+    width:200px;
+    display:block;
+    float:left;
+    margin-bottom: 10px;
+}
+#login_content label {
+    clear:both;
+    width:150px;
+    text-align: left;
+    display:block;
+    float:left;
+}
+#login_container .btn {
+    clear:both;
+    display:block;
+    width:100%;
+}
+
+#login_container .cont {
+     clear:both;
+     padding:20px;
+}
+
+ul.errorlist.nonfield {
+    list-style:none;
+    margin: 0px;
+    padding: 0px 0px 10px 0px;
+    color:red;
+    font-size: 0.8em;
+
+}
