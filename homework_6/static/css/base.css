@@ -34,27 +34,34 @@ a {
 
 
 
-form {
-    margin: 0 auto;
-    padding: 1em;
-    border: 1px solid #CCC;
-    border-radius: 1em;
+form.common {
+    margin: 0;
+    padding: 0;
+    border: 0;
 }
-form div + div {
+form.common + div {
     margin-top: 1em;
 }
-label {
+form.common label {
     display: inline-block;
-    text-align: center;
-    width: 40%;
+    clear:both;
+    width:150px;
+    text-align: left;
+    float:left;
+    padding-top:2px;
 }
-input {
-    font: 1em sans-serif;
+
+form.common input {
     -moz-box-sizing: border-box;
     box-sizing: border-box;
     border: 1px solid #999;
-    width: 50%;
+    width:200px;
+    display:block;
+    float:left;
+    margin-bottom: 10px;
 }
+
+
 input:focus {
     border-color: #000;
 }

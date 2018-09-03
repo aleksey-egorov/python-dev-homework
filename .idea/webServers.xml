@@ -10,6 +10,14 @@
           <option name="port" value="22" />
         </fileTransfer>
       </webServer>
+      <webServer id="f1f1fed7-fba8-4d3b-a480-115be201ec06" name="nginx-server" url="http://35.228.29.133">
+        <fileTransfer host="35.228.29.133" port="22" rootFolder="/work/python-dev" accessType="SFTP">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" />
+          </advancedOptions>
+          <option name="port" value="22" />
+        </fileTransfer>
+      </webServer>
     </option>
   </component>
 </project>

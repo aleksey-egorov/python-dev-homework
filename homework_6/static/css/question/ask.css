@@ -1,0 +1,13 @@
+#ask_ul {
+    list-style: none;
+    padding-left:0;
+    margin-left:0;
+}
+
+#ask_ul > li {
+    padding-left:0;
+    margin-left:0;
+    display:block;
+    height:40px;
+}
+
