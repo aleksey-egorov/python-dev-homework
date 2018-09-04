@@ -27,7 +27,7 @@ urlpatterns = [
     )),
     path('logout/', auth_views.LogoutView.as_view()),
     path('ask/', AskView.as_view()),
-    re_path(r'^question/\d+/', QuestionView.as_view()),
+    path('question/<int:id>/', QuestionView.as_view(), name="question"),
     path('admin/', admin.site.urls),
     path('', include('index.urls')),
 ]

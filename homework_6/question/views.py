@@ -2,8 +2,8 @@ import datetime
 from django.shortcuts import render
 from django.http import HttpResponseRedirect
 from django.views.generic import View
-from question.models import Question, Trend
 
+from question.models import Question, Trend
 from .forms import AskForm, AnswerForm
 
 # Create your views here.
@@ -34,9 +34,11 @@ class AskView(View):
                 "trends": Trend.get_trends()
             })
 
+
 class QuestionView(View):
 
-    def get(self, request):
+    def get(self, request, id):
         form = AnswerForm()
+        quest = Question.objects.get(id=id)
 
-        return render(request, "question/question.html", {"trends": Trend.get_trends(), "form": form.as_ul() })
+        return render(request, "question/question.html", {"trends": Trend.get_trends(), "form": form.as_ul(), "question": quest })

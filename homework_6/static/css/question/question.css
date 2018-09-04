@@ -1,0 +1,55 @@
+.up_arrow {
+    border:1px solid #efefef;
+    width:40px;
+    height:40px;
+    background-image:url('/static/images/sprite.png');
+    background-position: 0px 0px;
+
+}
+
+.down_arrow {
+    border:1px solid #efefef;
+    width:40px;
+    height:40px;
+    background-image:url('/static/images/sprite.png');
+    background-position: 0px 0px;
+}
+
+.votes {
+    width:40px;
+    height:40px;
+    text-align:center;
+    vertical-align:middle;
+    font-size:1.4em;
+    font-weight:bold;
+    color:#aaa;
+    display: table;
+}
+
+.votes span {
+    display: table-cell;
+    text-align:center;
+    width:100%;
+    vertical-align:middle;
+}
+
+.question_content {
+    padding-left:0px;
+    height:100%;
+
+}
+
+.content {
+   margin-bottom:10px;
+    display:block;
+}
+
+.delimiter {
+    height:30px;
+    border-bottom:1px solid #ddd;
+    clear:both;
+}
+
+.new_question {
+    margin-top:10px;
+}

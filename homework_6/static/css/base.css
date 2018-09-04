@@ -94,8 +94,11 @@ button:hover {
     background: #23d36c;
 }
 
+.w90 {
+    width: 90%;
+}
 .w75 {
-    width:75%;
+    width: 75%;
 }
 .w60 {
     width: 60%;

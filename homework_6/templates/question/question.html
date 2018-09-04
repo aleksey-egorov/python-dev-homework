@@ -5,31 +5,37 @@
 {% load static %}
 <link rel="stylesheet" type="text/css" href="{% static 'css/question/question.css' %}" />
 
-
     <div id="left_container" class="left w75">
-        <h1 class="head">Question</h1>
 
-        <form class="common" method="post" action="/ask/">
-                <div class="cont">
-                    {% csrf_token %}
-                    <ul id="ask_ul">
-                        {{ form }}
-                    </ul>
-                    <div class="btn"><button type="submit">Ask!</button></div>
-                </div>
-        </form>
+        <h1 class="head">{{ question.heading }}</h1>
+        <div class="content">
+            <div class="left w10">
+                <div class="up_arrow"></div>
+                <div class="votes"><span>{{ question.votes }}</span></div>
+                <div class="down_arrow"></div>
+            </div>
+            <div class="question_content right w90" >{{ question.content }}</div>
+        </div>
+        <div class="delimiter"></div>
+
+        <div class="new_question">
+            <h2>Your question</h2>
+            <form class="common" method="post" action="/ask/">
+                    <div class="cont">
+                        {% csrf_token %}
+                        <ul id="ask_ul">
+                            {{ form }}
+                        </ul>
+                        <div class="btn"><button type="submit">Ask!</button></div>
+                    </div>
+            </form>
+        </div>
 
     </div>
-
-
-
-
 
 
 {% if message %}
     <p><strong>{{ message }}</strong></p>
 {% endif %}
-
-
 
 {% endblock content %}
