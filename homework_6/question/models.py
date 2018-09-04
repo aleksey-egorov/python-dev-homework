@@ -35,6 +35,9 @@ class Question(models.Model):
         return user.username
 
 
+
+
+
 class Trend(object):
     @staticmethod
     def get_trends():

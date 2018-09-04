@@ -8,6 +8,10 @@
     padding-left:0;
     margin-left:0;
     display:block;
-    height:40px;
+    min-height:30px;
+    margin-bottom:10px;
+}
+#ask_ul input, #ask_ul textarea {
+    width:500px;
 }
 

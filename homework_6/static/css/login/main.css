@@ -17,11 +17,6 @@
     display:block;
     float:left;
 }
-#login_container .btn {
-    clear:both;
-    display:block;
-    width:100%;
-}
 
 #login_container .cont {
      clear:both;

@@ -18,7 +18,7 @@ from django.urls import path, re_path, include
 from django.contrib.auth import views as auth_views
 
 from question.models import Trend
-from question.views import AskView
+from question.views import AskView, QuestionView
 
 urlpatterns = [
 
@@ -27,6 +27,7 @@ urlpatterns = [
     )),
     path('logout/', auth_views.LogoutView.as_view()),
     path('ask/', AskView.as_view()),
+    re_path(r'^question/\d+/', QuestionView.as_view()),
     path('admin/', admin.site.urls),
     path('', include('index.urls')),
 ]
