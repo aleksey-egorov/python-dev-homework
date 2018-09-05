@@ -35,10 +35,13 @@ class Question(models.Model):
         return user.username
 
 
-
-
-
 class Trend(object):
     @staticmethod
     def get_trends():
         return Question.objects.order_by('-votes')[:5]
+
+class Answer(models.Model):
+    content = models.TextField()
+    question_id = models.IntegerField(default=0)
+    author = models.IntegerField(default=0)
+    pub_date = models.DateTimeField('date published')

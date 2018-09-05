@@ -33,16 +33,35 @@
     vertical-align:middle;
 }
 
+.question {
+    clear:both;
+    display:block;
+    width:100%;
+    min-height:140px;
+}
 .question_content {
+    padding-left:0px;
+    height:100%;
+}
+
+.content {
+   margin-bottom:10px;
+   display:block;
+}
+
+.answers {
+    clear:both;
+     display:block;
+    width:100%;
+     min-height:140px;
+    margin-top:10px;
+}
+.answers .answer_content {
     padding-left:0px;
     height:100%;
 
 }
 
-.content {
-   margin-bottom:10px;
-    display:block;
-}
 
 .delimiter {
     height:30px;
@@ -52,4 +71,18 @@
 
 .new_question {
     margin-top:10px;
+}
+
+.new_question textarea {
+    width:500px;
+}
+
+.new_question ul {
+    list-style:none;
+    margin:0px;
+    padding:0px;
+}
+
+.new_question .btn {
+    padding-top: 20px;
 }

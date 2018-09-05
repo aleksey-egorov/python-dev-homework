@@ -6,4 +6,4 @@ class AskForm(forms.Form):
     tags = forms.CharField(label='Tags', max_length=200)
 
 class AnswerForm(forms.Form):
-    content = forms.CharField(label='Content', widget=forms.Textarea)
+    answer = forms.CharField(label='', widget=forms.Textarea)
