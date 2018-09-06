@@ -1,10 +1,10 @@
-function voteAnswer(val, id) {
+function makeVote(type, val, id) {
     $.ajax({
-        url: '/ajax/',
-        type: 'post',
-        data: 'route=catalog/get-brands-list&ids=' + list + '&sid=' + sec + '&word=' + word,
+        url: '/question/vote/',
+        type: 'get',
+        data: 'type=' + type + '&id=' + id + '&value=' + val,
         success: function (data, textStatus) {
-            eval(data);
+            alert(data);
 
         }
     });
@@ -12,10 +12,10 @@ function voteAnswer(val, id) {
 
 $(".answer_vote.up_arrow").click(function() {
     id=$(this).attr("data-id");
-    voteAnswer('up', id);
+    makeVote('answer','up', id);
 });
 
 $(".answer_vote.down_arrow").click(function() {
     id=$(this).attr("data-id");
-    voteAnswer('down', id);
+    makeVote('answer','down', id);
 });

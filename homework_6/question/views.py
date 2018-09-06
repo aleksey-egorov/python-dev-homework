@@ -3,7 +3,7 @@ from django.shortcuts import render
 from django.http import HttpResponseRedirect
 from django.views.generic import View
 
-from question.models import Question, Trend, Answer
+from question.models import Question, Trend, Answer, AnswerVote, QuestionVote
 from .forms import AskForm, AnswerForm
 
 # Create your views here.
@@ -66,3 +66,45 @@ class QuestionView(View):
                 "message": message,
                 "trends": Trend.get_trends()
             })
+
+
+class VoteView(View):
+
+    def get(self, request):
+        type =  request.GET.get('type')
+        obj_id = int(request.GET.get('id'))
+        value = request.GET.get('value')
+
+        result = 'error'
+        if type in ('answer', 'question') and obj_id > 0 and value in ('up', 'down'):
+            if value == 'up':
+                val = 1
+            else:
+                val = -1
+            if type == 'answer':
+                vote = AnswerVote
+                ref_obj = Answer.objects.get(id=obj_id)
+            else:
+                vote = QuestionVote
+                ref_obj = Question.objects.get(id=obj_id)
+
+            if vote.objects.filter(reference=ref_obj, author=request.user.id).exists():
+                existing_vote = vote.objects.get(reference=ref_obj, author=request.user.id)
+                if existing_vote.value == val:
+                    existing_vote.delete()
+                    result = 'delete'
+                else:
+                    existing_vote.value = val
+                    existing_vote.save()
+                    result = 'update'
+            else:
+                new_vote = vote(reference=ref_obj,
+                                author=request.user.id,
+                                value=val)
+                new_vote.save()
+                result = 'add'
+
+        return render(request, "question/vote.html", {
+            "result": result,
+            "type": type
+        })

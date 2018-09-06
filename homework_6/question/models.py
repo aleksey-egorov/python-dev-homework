@@ -50,5 +50,12 @@ class Answer(models.Model):
 
 
 class AnswerVote(models.Model):
-    answer_id = models.IntegerField(default=0)
+    reference = models.ForeignKey(Answer, on_delete=models.CASCADE, default=0)
     author = models.IntegerField(default=0)
+    value = models.IntegerField(default=0)
+
+
+class QuestionVote(models.Model):
+    reference = models.ForeignKey(Question, on_delete=models.CASCADE, default=0)
+    author = models.IntegerField(default=0)
+    value = models.IntegerField(default=0)
