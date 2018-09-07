@@ -76,6 +76,7 @@ class VoteView(View):
         value = request.GET.get('value')
 
         result = 'error'
+        votes = 0
         if type in ('answer', 'question') and obj_id > 0 and value in ('up', 'down'):
             if value == 'up':
                 val = 1
@@ -97,14 +98,16 @@ class VoteView(View):
                     existing_vote.value = val
                     existing_vote.save()
                     result = 'update'
+                votes = existing_vote.reference.votes
             else:
                 new_vote = vote(reference=ref_obj,
                                 author=request.user.id,
                                 value=val)
                 new_vote.save()
                 result = 'add'
+                votes = new_vote.reference.votes
 
         return render(request, "question/vote.html", {
             "result": result,
-            "type": type
+            "votes": votes
         })

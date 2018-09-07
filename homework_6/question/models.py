@@ -1,6 +1,8 @@
 from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
+from django.dispatch import receiver
+from django.db.models.signals import post_save, post_delete
 
 # Create your models here.
 
@@ -34,6 +36,18 @@ class Question(models.Model):
         user = User.objects.get(id=self.author)
         return user.username
 
+    def recount_votes(self):
+        votes = QuestionVote.objects.filter(reference=self).aggregate(models.Sum('value'))
+        self.votes = votes['value__sum']
+        if self.votes == None:
+            self.votes = 0
+        self.save()
+
+    def active_vote(self):
+        if QuestionVote.objects.filter(reference=self, author=self.author).exists():
+            existing_vote = QuestionVote.objects.get(reference=self, author=self.author)
+            return existing_vote.value
+
 
 class Trend(object):
     @staticmethod
@@ -48,14 +62,52 @@ class Answer(models.Model):
     pub_date = models.DateTimeField('date published')
     votes = models.IntegerField(default=0)
 
+    def recount_votes(self):
+        votes = AnswerVote.objects.filter(reference=self).aggregate(models.Sum('value'))
+        self.votes = votes['value__sum']
+        if self.votes == None:
+            self.votes = 0
+        self.save()
+
+    def active_vote(self):
+        if AnswerVote.objects.filter(reference=self, author=self.author).exists():
+            existing_vote = AnswerVote.objects.get(reference=self, author=self.author)
+            return existing_vote.value
+
 
 class AnswerVote(models.Model):
     reference = models.ForeignKey(Answer, on_delete=models.CASCADE, default=0)
     author = models.IntegerField(default=0)
     value = models.IntegerField(default=0)
 
+@receiver(post_save, sender=AnswerVote)
+def create_answer_vote(sender, instance, created, **kwargs):
+    if created:
+        instance.reference.recount_votes()
+
+@receiver(post_save, sender=AnswerVote)
+def update_answer_vote(sender, instance, **kwargs):
+    instance.reference.recount_votes()
+
+@receiver(post_delete, sender=AnswerVote)
+def delete_answer_vote(sender, instance, **kwargs):
+    instance.reference.recount_votes()
+
 
 class QuestionVote(models.Model):
     reference = models.ForeignKey(Question, on_delete=models.CASCADE, default=0)
     author = models.IntegerField(default=0)
     value = models.IntegerField(default=0)
+
+@receiver(post_save, sender=QuestionVote)
+def create_quest_vote(sender, instance, created, **kwargs):
+    if created:
+        instance.reference.recount_votes()
+
+@receiver(post_save, sender=QuestionVote)
+def update_quest_vote(sender, instance, **kwargs):
+    instance.reference.recount_votes()
+
+@receiver(post_delete, sender=QuestionVote)
+def delete_quest_vote(sender, instance, **kwargs):
+    instance.reference.recount_votes()

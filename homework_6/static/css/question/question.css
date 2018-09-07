@@ -25,7 +25,18 @@
     font-weight:bold;
     color:#aaa;
     display: table;
+    padding-top:1px;
+    padding-left:1px;
 }
+
+.up_arrow.active {
+    border:1px solid red;
+}
+
+.down_arrow.active {
+    border:1px solid red;
+}
+
 
 .votes span {
     display: table-cell;
