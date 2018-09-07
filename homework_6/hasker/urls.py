@@ -18,7 +18,7 @@ from django.urls import path, re_path, include
 from django.contrib.auth import views as auth_views
 
 from question.models import Trend
-from question.views import AskView, QuestionView, VoteView
+from question.views import AskView, QuestionView, VoteView, BestAnswerView
 
 urlpatterns = [
 
@@ -29,6 +29,7 @@ urlpatterns = [
     path('ask/', AskView.as_view()),
     path('question/<int:id>/', QuestionView.as_view(), name="question"),
     path('question/vote/', VoteView.as_view(), name="question_vote"),
+    path('question/best/', BestAnswerView.as_view(), name="question_best"),
     path('admin/', admin.site.urls),
     path('', include('index.urls')),
 ]

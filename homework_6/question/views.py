@@ -2,6 +2,7 @@ import datetime
 from django.shortcuts import render
 from django.http import HttpResponseRedirect
 from django.views.generic import View
+from django.db import transaction
 
 from question.models import Question, Trend, Answer, AnswerVote, QuestionVote
 from .forms import AskForm, AnswerForm
@@ -40,7 +41,7 @@ class QuestionView(View):
     def get(self, request, id):
         form = AnswerForm()
         quest = Question.objects.get(id=id)
-        answers = Answer.objects.filter(question_id=id)
+        answers = Answer.objects.filter(question=quest)
 
         return render(request, "question/question.html", {
             "trends": Trend.get_trends(),
@@ -52,12 +53,13 @@ class QuestionView(View):
     def post(self, request, id):
         form = AnswerForm(request.POST)
         if form.is_valid():
+            quest = Question.objects.get(id=id)
             new_answer = Answer(content=form.cleaned_data['answer'],
-                                  question_id=id,
+                                  question=quest,
                                   pub_date=datetime.datetime.now(),
                                   author=request.user.id)
             new_answer.save()
-            return HttpResponseRedirect('/question/' + str(new_answer.question_id) + '/')
+            return HttpResponseRedirect('/question/' + str(new_answer.question.id) + '/')
         else:
             message = 'Error while adding'
             return render(request, "question/question.html", {
@@ -110,4 +112,28 @@ class VoteView(View):
         return render(request, "question/vote.html", {
             "result": result,
             "votes": votes
+        })
+
+
+class BestAnswerView(View):
+
+    def get(self, request):
+        answer_id = int(request.GET.get('id'))
+        answer = Answer.objects.get(id=answer_id)
+
+        result = 'error'
+        if answer.author == request.user.id:
+            with transaction.atomic():
+                if answer.best == True:
+                    answer.best = False
+                    answer.save()
+                    result = 'delete'
+                else:
+                    Answer.objects.filter(question=answer.question).update(best=False)
+                    answer.best = True
+                    answer.save()
+                    result = 'update'
+
+        return render(request, "question/best.html", {
+            "result": result
         })

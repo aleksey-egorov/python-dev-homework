@@ -57,10 +57,11 @@ class Trend(object):
 
 class Answer(models.Model):
     content = models.TextField()
-    question_id = models.IntegerField(default=0)
+    question = models.ForeignKey(Question, on_delete=models.CASCADE, default=0)
     author = models.IntegerField(default=0)
     pub_date = models.DateTimeField('date published')
     votes = models.IntegerField(default=0)
+    best = models.BooleanField(default=False)
 
     def recount_votes(self):
         votes = AnswerVote.objects.filter(reference=self).aggregate(models.Sum('value'))
@@ -68,6 +69,14 @@ class Answer(models.Model):
         if self.votes == None:
             self.votes = 0
         self.save()
+
+    def author_name(self):
+        user = User.objects.get(id=self.author)
+        return user.username
+
+    def author_avatar(self):
+        user = User.objects.get(id=self.author)
+        return user.profile.avatar
 
     def active_vote(self):
         if AnswerVote.objects.filter(reference=self, author=self.author).exists():

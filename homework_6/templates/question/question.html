@@ -16,7 +16,16 @@
                     <div class="votes"><span>{{ question.votes }}</span></div>
                     <div class='quest_vote down_arrow {% if question.active_vote == -1 %} active {% endif %}' data-id="{{ question.id }}"></div>
                 </div>
-                <div class="question_content right w90" >{{ question.content }}</div>
+                <div class="question_content right w90" >
+                    <div class="wrap">
+                         <div class="cnt">{{ question.content }}</div>
+                         <div class="sign">
+                              <div class="avatar" style="background-image:url('/media/{{ question.author_avatar }}');background-size:cover;background-repeat:no-repeat;background-position:center center;')"></div>
+                              <div class="author">{{ question.author_name }}</div>
+                              <div class="date">{{ question.pub_date }}</div>
+                         </div>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="delimiter"></div>
@@ -29,8 +38,24 @@
                             <div class="answer_vote up_arrow {% if answer.active_vote == 1 %} active {% endif %}" data-id="{{ answer.id }}"></div>
                             <div class="votes"><span>{{ answer.votes }}</span></div>
                             <div class="answer_vote down_arrow {% if answer.active_vote == -1 %} active {% endif %}" data-id="{{ answer.id }}"></div>
+                            {% if answer.author == user.id %}
+                            <div class="best_answer for_author {% if answer.best == True %} active {% endif %}" data-id="{{ answer.id }}"></div>
+                            {% elif answer.best == True %}
+                            <div class="best_answer active"></div>
+                            {% endif %}
                         </div>
-                        <div class="answer_content right w90" >{{ answer.content }}</div>
+                        <div class="answer_content right w90" >
+                            <div class="wrap">
+                                <div class="cnt">{{ answer.content }}</div>
+                                <div class="sign">
+                                    <div class="avatar" style="background-image:url('/media/{{ answer.author_avatar }}');background-size:cover;background-repeat:no-repeat;background-position:center center;')"></div>
+                                    <div class="author">{{ answer.author_name }}</div>
+                                    <div class="date">{{ answer.pub_date }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+
                     </div>
                 </div>
                  <div class="delimiter"></div>
