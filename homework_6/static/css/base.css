@@ -46,7 +46,7 @@ form.common label {
     width:150px;
     text-align: left;
     float:left;
-    padding-top:2px;
+    padding-top:5px;
 }
 
 form.common input {
@@ -57,6 +57,9 @@ form.common input {
     display:block;
     float:left;
     margin-bottom: 10px;
+}
+form.common input[type=file] {
+    border:0px;
 }
 form.common .btn {
     clear:both;
@@ -127,7 +130,7 @@ button:hover {
     text-align:left !important;
 }
 
-input[type=text], input[type=password] {
+input[type=text], input[type=password], input[type=email] {
     height: 30px;
     border: 1px solid #aaa;
 }

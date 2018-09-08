@@ -1,0 +1,17 @@
+#signup_ul {
+    list-style: none;
+    padding-left:0;
+    margin-left:0;
+}
+
+#ignup_ul > li {
+    padding-left:0;
+    margin-left:0;
+    display:block;
+    min-height:30px;
+    margin-bottom:10px;
+}
+#signup_ul input[type=text] {
+    width:500px;
+}
+
