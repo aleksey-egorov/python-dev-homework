@@ -22,8 +22,6 @@ h1,h2,h3{
 h1 {
     font-size:2em;
     font-weight:bold;
-}
-h1.head {
     text-align: left;
     padding-top:0px;
     margin-top:0px;
@@ -212,6 +210,7 @@ input[type=text], input[type=password] {
 
 #left_container {
     padding-top:20px;
+    padding-bottom:40px;
 }
 #trending {
     padding-top:20px;

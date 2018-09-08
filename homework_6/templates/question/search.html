@@ -7,7 +7,7 @@
 
 
     <div id="left_container" class="left w75">
-        <div class="head"><a >New questions</a> | <a >Hot questions</a></div>
+        <h1>Search results</h1>
 
         {% if questions %}
 
@@ -29,9 +29,9 @@
                                         {{ question.heading }}
                                     </a>
                                     <div class="tags">
-                                        {% for tag in question.tags_list %}
+                                         {% for tag in question.tags_list %}
                                             <a href="/tag/{{ tag }}/">{{ tag }}</a>
-                                        {% endfor %}
+                                         {% endfor %}
                                     </div>
                                 </div>
                             </li>

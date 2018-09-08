@@ -3,12 +3,13 @@ from django.shortcuts import render
 from django.http import HttpResponseRedirect
 from django.views.generic import View
 from django.db import transaction
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+from django.db.models import Q
 
 from question.models import Question, Trend, Answer, AnswerVote, QuestionVote
 from .forms import AskForm, AnswerForm
 
 # Create your views here.
-
 
 class AskView(View):
 
@@ -136,4 +137,42 @@ class BestAnswerView(View):
 
         return render(request, "question/best.html", {
             "result": result
+        })
+
+
+class SearchView(View):
+
+    def get(self, request):
+        query = request.GET.get('q')
+        quest_list = Question.objects.filter(Q(heading__icontains=query) | Q(content__icontains=query)).order_by('votes','-pub_date')[:20]
+        paginator = Paginator(quest_list, 20)
+        page = request.GET.get('page')
+        questions = paginator.get_page(page)
+
+        return render(request, "question/search.html", {
+            "questions": questions,
+            "query": query,
+            "trends": Trend.get_trends()
+        })
+
+
+class TagView(View):
+
+    def get(self, request, tag):
+        tag = str(tag).strip()
+        quest_list = Question.objects.filter(tags__icontains=tag).order_by('votes','-pub_date')[:20]
+        paginator = Paginator(quest_list, 20)
+        page = request.GET.get('page')
+
+        try:
+            questions = paginator.get_page(page)
+        except PageNotAnInteger:
+            questions = paginator.get_page(1)
+        except EmptyPage:
+            questions = paginator.get_page(page)
+
+        return render(request, "question/search.html", {
+            "questions": questions,
+            "query": "tag:{}".format(tag),
+            "trends": Trend.get_trends()
         })

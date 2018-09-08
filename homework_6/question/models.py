@@ -36,6 +36,13 @@ class Question(models.Model):
         user = User.objects.get(id=self.author)
         return user.username
 
+    def author_avatar(self):
+        user = User.objects.get(id=self.author)
+        return user.profile.avatar
+
+    def tags_list(self):
+        return self.tags.split(",")
+
     def recount_votes(self):
         votes = QuestionVote.objects.filter(reference=self).aggregate(models.Sum('value'))
         self.votes = votes['value__sum']

@@ -4,6 +4,10 @@
     list-style: none;
 }
 
+#questions_ul > li.main:first-child{
+    border-top:1px solid #aaa;
+}
+
 #questions_ul > li.main{
     display:block;
     border-bottom:1px solid #aaa;
@@ -21,7 +25,22 @@
 }
 
 #questions_ul .list_content > li .tags{
-    display:block
+    display:block;
+    margin-top:4px;
+}
+
+#questions_ul .list_content > li .tags a {
+    background-color:#efefef;
+    display:block;
+    float:left;
+    padding:2px 4px;
+    margin-right:8px;
+    text-decoration:none;
+    color:#666;
+}
+
+#questions_ul .list_content > li .tags a:hover {
+    color:#ef0000;
 }
 
 #questions_ul .list_content > li .quest_cnt{
