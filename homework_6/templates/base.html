@@ -21,10 +21,10 @@
             </div>
             {% if user.is_authenticated %}
                 <div class="avatar">
-                    <div style="background-image:url('/media/{{ user.profile.avatar }}');background-size:cover;background-repeat:no-repeat;background-position:center center;" class="avatar_img"></div>
+                    <a href="/settings/"><div style="background-image:url('/media/{{ user.profile.avatar }}');background-size:cover;background-repeat:no-repeat;background-position:center center;" class="avatar_img"></div></a>
                 </div>
                 <div class="info">
-                    <div class="username">{{ user.username }}</div>
+                    <div class="username"><a href="/settings/">{{ user.username }}</a></div>
                     <div class="logout"><a href="/logout/">Logout</a></div>
                 </div>
             {% else %}

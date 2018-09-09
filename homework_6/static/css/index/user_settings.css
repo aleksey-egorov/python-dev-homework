@@ -1,0 +1,36 @@
+#user_settings_ul .rcon{
+    padding-top:5px;
+    float:left;
+
+}
+
+#user_settings_ul .rcon .avatar {
+    height:120px;
+    width:120px;
+    border:1px solid #efefef;
+    margin-bottom:20px;
+    float:left;
+}
+
+#user_settings_ul .rcon .avatar_check {
+    width:120px;
+    float:right;
+    font-size:0.8em;
+}
+#user_settings_ul .rcon .avatar_check input {
+    padding-top:4px;
+    display:block;
+    float:left;
+}
+#user_settings_ul .rcon .avatar_check span {
+    line-height:25px;
+    display:block;
+    float:left;
+}
+
+#user_settings_ul .rcon .avatar_field {
+    border:1px solid #efefef;
+    width:120px;
+    clear:both;
+}
+

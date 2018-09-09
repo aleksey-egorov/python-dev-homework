@@ -49,7 +49,7 @@ form.common label {
     padding-top:5px;
 }
 
-form.common input {
+form.common input[type=text], form.common input[type=password], form.common input[type=file] {
     -moz-box-sizing: border-box;
     box-sizing: border-box;
     border: 1px solid #999;
@@ -67,10 +67,32 @@ form.common .btn {
     width:100%;
 }
 
+form.common .form_ul{
+    list-style: none;
+    padding-left:0;
+    margin-left:0;
+}
+
+form.common .form_ul > li {
+    padding-left:0;
+    margin-left:0;
+    display:block;
+    min-height:30px;
+    margin-bottom:10px;
+}
+form.common .form_ul input[type=text] {
+    width:500px;
+}
+
+
+
 
 input:focus {
     border-color: #000;
 }
+
+
+
 p, div.button {
     text-align: center;
 }
@@ -132,6 +154,7 @@ button:hover {
 
 input[type=text], input[type=password], input[type=email] {
     height: 30px;
+    padding:0px 4px 0px 4px;
     border: 1px solid #aaa;
 }
 
@@ -202,6 +225,15 @@ input[type=text], input[type=password], input[type=email] {
     padding-right:10px;
     padding-top:20px;
 }
+#main_header .info .username a {
+    font-size:1em;
+    color:#111;
+    text-decoration:none;
+}
+#main_header .info .username a:hover {
+    color:#ef0000;
+}
+
 #main_header .info .logout a {
     font-size:0.8em;
     color:#888;

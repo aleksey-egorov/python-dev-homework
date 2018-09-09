@@ -6,7 +6,7 @@ from django.http import HttpResponseRedirect
 from django.db import transaction
 
 from question.models import Question, Trend
-from index.forms import SignupForm
+from index.forms import SignupForm, UserForm, ProfileForm
 
 # Create your views here.
 
@@ -32,7 +32,7 @@ class SignupView(View):
         })
 
     def post(self, request):
-        form = SignupForm(request.POST)
+        form = SignupForm(request.POST, request.FILES)
         if form.is_valid():
             # Creating user and profile
             with transaction.atomic():
@@ -43,11 +43,44 @@ class SignupView(View):
             new_user.profile.avatar = form.cleaned_data['avatar']
             new_user.profile.save()
 
-            return HttpResponseRedirect('/signup/added/')
+            return HttpResponseRedirect('/signup/done/')
         else:
-            message = 'Error while adding new user'
-            return render(request, "index/signup.html", {
-                "form": form,
-                "message": message,
-                "trends": Trend.get_trends()
-            })
+            message = 'Error while adding new user ' + str(form.cleaned_data)
+        return render(request, "index/signup.html", {
+            "form": form,
+            "message": message,
+            "trends": Trend.get_trends()
+        })
+
+
+class SignupDoneView(View):
+
+    def get(self, request):
+        return render(request, "index/signup_done.html", {
+            "trends": Trend.get_trends()
+        })
+
+
+class UserSettingsView(View):
+
+    def get(self, request):
+        return render(request, "index/settings.html", {
+            "trends": Trend.get_trends()
+        })
+
+    def post(self, request):
+        user_form = UserForm(request.POST, instance=request.user)
+        profile_form = ProfileForm(request.POST, request.FILES,instance=request.user.profile)
+        if user_form.is_valid() and profile_form.is_valid():
+            with transaction.atomic():
+                user_form.save()
+                profile_form.save()
+            message = 'User settings successfully updated'
+        else:
+            message = 'Error while updating user'
+        return render(request, "index/settings.html", {
+            "user_form": user_form,
+            "profile_form": profile_form,
+            "message": message,
+            "trends": Trend.get_trends()
+        })

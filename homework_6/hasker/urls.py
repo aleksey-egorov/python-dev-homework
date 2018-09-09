@@ -17,17 +17,18 @@ from django.contrib import admin
 from django.urls import path, re_path, include
 from django.contrib.auth import views as auth_views
 
-from index.views import SignupView
+from index.views import SignupView, SignupDoneView, UserSettingsView
 from question.models import Trend
 from question.views import AskView, QuestionView, VoteView, BestAnswerView, SearchView, TagView
 
 urlpatterns = [
-
     path('login/', auth_views.LoginView.as_view(
         extra_context={"trends": Trend.get_trends()}
     )),
     path('logout/', auth_views.LogoutView.as_view()),
     path('signup/', SignupView.as_view()),
+    path('signup/done/', SignupDoneView.as_view()),
+    path('settings/', UserSettingsView.as_view()),
     path('ask/', AskView.as_view()),
     path('question/<int:id>/', QuestionView.as_view(), name="question"),
     path('question/vote/', VoteView.as_view(), name="question_vote"),
