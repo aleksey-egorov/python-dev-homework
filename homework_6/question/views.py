@@ -176,3 +176,30 @@ class TagView(View):
             "query": "tag:{}".format(tag),
             "trends": Trend.get_trends()
         })
+
+
+class QuestionListView(View):
+
+    def get(self, request):
+        page = request.GET.get('page')
+        sort = request.GET.get('sort')
+        if sort == 'date':
+            sort_1 = '-pub_date'
+            sort_2 = '-votes'
+        else:
+            sort_1 = '-votes'
+            sort_2 = '-pub_date'
+        quest_list = Question.objects.order_by(sort_1, sort_2)
+        paginator = Paginator(quest_list, 20)
+
+        try:
+            questions = paginator.get_page(page)
+        except PageNotAnInteger:
+            questions = paginator.get_page(1)
+        except EmptyPage:
+            questions = paginator.get_page(page)
+
+        return render(request, "question/list.html", {
+            "questions": questions,
+            "trends": Trend.get_trends()
+        })

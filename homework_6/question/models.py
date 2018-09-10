@@ -12,7 +12,6 @@ class Question(models.Model):
     tags = models.CharField(max_length=255)
     pub_date = models.DateTimeField('date published')
     votes = models.IntegerField(default=0)
-    answers = models.IntegerField(default=0)
     author = models.IntegerField(default=0)
 
     def published(self):

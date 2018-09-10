@@ -12,9 +12,9 @@
         <div class="question" id="question_{{ question.id }}">
             <div class="content">
                 <div class="left w10">
-                    <div class='quest_vote up_arrow {% if question.active_vote == 1 %} active {% endif %}' data-id="{{ question.id }}"></div>
+                    <div class='quest_vote up_arrow {% if question.active_vote == 1 %} active {% endif %} {% if user.is_authenticated %} changeable {% endif %}' data-id="{{ question.id }}"></div>
                     <div class="votes"><span>{{ question.votes }}</span></div>
-                    <div class='quest_vote down_arrow {% if question.active_vote == -1 %} active {% endif %}' data-id="{{ question.id }}"></div>
+                    <div class='quest_vote down_arrow {% if question.active_vote == -1 %} active {% endif %} {% if user.is_authenticated %} changeable {% endif %}' data-id="{{ question.id }}"></div>
                 </div>
                 <div class="question_content right w90" >
                     <div class="wrap">
@@ -35,9 +35,9 @@
                 <div class="answers" id="answer_{{ answer.id }}">
                     <div class="content">
                         <div class="left w10">
-                            <div class="answer_vote up_arrow {% if answer.active_vote == 1 %} active {% endif %}" data-id="{{ answer.id }}"></div>
+                            <div class="answer_vote up_arrow {% if answer.active_vote == 1 %} active {% endif %} {% if user.is_authenticated %} changeable {% endif %}" data-id="{{ answer.id }}"></div>
                             <div class="votes"><span>{{ answer.votes }}</span></div>
-                            <div class="answer_vote down_arrow {% if answer.active_vote == -1 %} active {% endif %}" data-id="{{ answer.id }}"></div>
+                            <div class="answer_vote down_arrow {% if answer.active_vote == -1 %} active {% endif %} {% if user.is_authenticated %} changeable {% endif %}" data-id="{{ answer.id }}"></div>
                             {% if answer.author == user.id %}
                             <div class="best_answer for_author {% if answer.best == True %} active {% endif %}" data-id="{{ answer.id }}"></div>
                             {% elif answer.best == True %}

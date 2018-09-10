@@ -9,6 +9,7 @@ from django.dispatch import receiver
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     avatar = models.ImageField(null=True, blank=True, upload_to='avatars/')
+    reg_date = models.ImageField(blank=True, default='NULL')
 
     @receiver(post_save, sender=User)
     def create_user_profile(sender, instance, created, **kwargs):

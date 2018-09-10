@@ -19,7 +19,7 @@ from django.contrib.auth import views as auth_views
 
 from index.views import SignupView, SignupDoneView, UserSettingsView
 from question.models import Trend
-from question.views import AskView, QuestionView, VoteView, BestAnswerView, SearchView, TagView
+from question.views import AskView, QuestionView, QuestionListView, VoteView, BestAnswerView, SearchView, TagView
 
 urlpatterns = [
     path('login/', auth_views.LoginView.as_view(
@@ -33,6 +33,7 @@ urlpatterns = [
     path('question/<int:id>/', QuestionView.as_view(), name="question"),
     path('question/vote/', VoteView.as_view(), name="question_vote"),
     path('question/best/', BestAnswerView.as_view(), name="question_best"),
+    path('question/list/', QuestionListView.as_view(), name="question_vote"),
     path('search/', SearchView.as_view(), name="question_search"),
     path('tag/<str:tag>/', TagView.as_view(), name="question_tag"),
     path('admin/', admin.site.urls),

@@ -59,26 +59,25 @@ function markBestAnswer(id) {
     });
 }
 
-$(".answer_vote.up_arrow").click(function() {
+$(".answer_vote.up_arrow.changeable").click(function() {
     id=$(this).attr("data-id");
     makeVote('answer','up', id);
 });
 
-$(".answer_vote.down_arrow").click(function() {
+$(".answer_vote.down_arrow.changeable").click(function() {
     id=$(this).attr("data-id");
     makeVote('answer','down', id);
 });
 
-$(".quest_vote.up_arrow").click(function() {
+$(".quest_vote.up_arrow.changeable").click(function() {
     id=$(this).attr("data-id");
     makeVote('question','up', id);
 });
 
-$(".quest_vote.down_arrow").click(function() {
+$(".quest_vote.down_arrow.changeable").click(function() {
     id=$(this).attr("data-id");
     makeVote('question','down', id);
 });
-
 
 $(".best_answer.for_author").click(function() {
     id=$(this).attr("data-id");

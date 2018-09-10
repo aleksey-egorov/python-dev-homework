@@ -13,12 +13,16 @@ from index.forms import SignupForm, UserForm, ProfileForm
 class IndexView(View):
 
     def get(self, request):
-        quest_list = Question.objects.order_by('-pub_date')[:10]
-        paginator = Paginator(quest_list, 10)
+        quest_list = Question.objects.order_by('-pub_date')
+        paginator = Paginator(quest_list, 20)
         page = request.GET.get('page')
         questions = paginator.get_page(page)
 
-        return render(request, "index/index.html", {"questions": questions, "trends": Trend.get_trends() })
+        return render(request, "index/index.html", {
+            "questions": questions,
+            "page": page,
+            "trends": Trend.get_trends()
+        })
 
 
 class SignupView(View):

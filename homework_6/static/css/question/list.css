@@ -54,3 +54,23 @@
 #questions_ul .digit {
     font-size:1.2em;
 }
+
+
+#question_filter a {
+    color:#aaa;
+    text-decoration:underline;
+    cursor:pointer;
+}
+#question_filter a.active {
+    color:#333;
+    text-decoration:none;
+    cursor:default;
+}
+
+#question_filter a:hover {
+    color:#ef0000;
+}
+
+#question_filter a.active:hover {
+    color:#333;
+}

@@ -1,16 +1,5 @@
-{% extends "base.html" %}questions_content
-
-{% block content %}
-
-{% load static %}
-<link rel="stylesheet" type="text/css" href="{% static 'css/question/list.css' %}" />
 
 
-    <div id="left_container" class="left w75">
-        <div class="head" id="question_filter"><a class="active" data-type="date">New questions</a> | <a data-type="votes">Hot questions</a></div>
-        <input type="hidden" id="page" value="{{ page }}">
-
-        <div id="questions_content">
         {% if questions %}
 
             <ul id="questions_ul">
@@ -31,9 +20,9 @@
                                         {{ question.heading }}
                                     </a>
                                     <div class="tags">
-                                        {% for tag in question.tags_list %}
+                                         {% for tag in question.tags_list %}
                                             <a href="/tag/{{ tag }}/">{{ tag }}</a>
-                                        {% endfor %}
+                                         {% endfor %}
                                     </div>
                                 </div>
                             </li>
@@ -67,24 +56,6 @@
                 </span>
             </div>
 
-
         {% else %}
             <p>No questions are available right now.</p>
         {% endif %}
-
-        </div>
-
-    </div>
-
-
-
-
-
-
-{% if message %}
-    <p><strong>{{ message }}</strong></p>
-{% endif %}
-
-
-<script src="/static/js/index.js" type="text/javascript"></script>
-{% endblock content %}
