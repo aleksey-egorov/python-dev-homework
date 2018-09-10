@@ -8,13 +8,13 @@
 
     <div id="left_container" class="left w75">
 
-        <h1 class="head">{{ question.heading }}</h1>
+        <h1>{{ question.heading }}</h1>
         <div class="question" id="question_{{ question.id }}">
             <div class="content">
                 <div class="left w10">
-                    <div class='quest_vote up_arrow {% if question.active_vote == 1 %} active {% endif %} {% if user.is_authenticated %} changeable {% endif %}' data-id="{{ question.id }}"></div>
+                    <div class='quest_vote up_arrow {% if question.active_user_vote == 1 %} active {% endif %} {% if user.is_authenticated %} changeable {% endif %}' data-id="{{ question.id }}"></div>
                     <div class="votes"><span>{{ question.votes }}</span></div>
-                    <div class='quest_vote down_arrow {% if question.active_vote == -1 %} active {% endif %} {% if user.is_authenticated %} changeable {% endif %}' data-id="{{ question.id }}"></div>
+                    <div class='quest_vote down_arrow {% if question.active_user_vote == -1 %} active {% endif %} {% if user.is_authenticated %} changeable {% endif %}' data-id="{{ question.id }}"></div>
                 </div>
                 <div class="question_content right w90" >
                     <div class="wrap">
@@ -35,10 +35,10 @@
                 <div class="answers" id="answer_{{ answer.id }}">
                     <div class="content">
                         <div class="left w10">
-                            <div class="answer_vote up_arrow {% if answer.active_vote == 1 %} active {% endif %} {% if user.is_authenticated %} changeable {% endif %}" data-id="{{ answer.id }}"></div>
+                            <div class="answer_vote up_arrow {% if answer.active_user_vote == 1 %} active {% endif %} {% if user.is_authenticated %} changeable {% endif %}" data-id="{{ answer.id }}"></div>
                             <div class="votes"><span>{{ answer.votes }}</span></div>
-                            <div class="answer_vote down_arrow {% if answer.active_vote == -1 %} active {% endif %} {% if user.is_authenticated %} changeable {% endif %}" data-id="{{ answer.id }}"></div>
-                            {% if answer.author == user.id %}
+                            <div class="answer_vote down_arrow {% if answer.active_user_vote == -1 %} active {% endif %} {% if user.is_authenticated %} changeable {% endif %}" data-id="{{ answer.id }}"></div>
+                            {% if question.author == user.id %}
                             <div class="best_answer for_author {% if answer.best == True %} active {% endif %}" data-id="{{ answer.id }}"></div>
                             {% elif answer.best == True %}
                             <div class="best_answer active"></div>
@@ -62,18 +62,20 @@
             {% endfor%}
         {% endif%}
 
+        {% if user.is_authenticated %}
         <div class="new_question">
             <h2>Your answer</h2>
             <form class="common" method="post" action="/question/{{ question.id }}/">
                     <div class="cont">
                         {% csrf_token %}
                         <ul id="ask_ul">
-                            {{ form }}
+                            {{ form.as_ul }}
                         </ul>
                         <div class="btn"><button type="submit">Submit!</button></div>
                     </div>
             </form>
         </div>
+        {% endif %}
 
     </div>
 

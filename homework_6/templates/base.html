@@ -46,9 +46,11 @@
                 <div id="trending" class="right w25">
                         <div class="content">
                             {% if user.is_authenticated %}
+                                <div class="ask_wrap">
                                 <a href="/ask/"><button >Ask!</button></a>
+                                </div>
                             {% endif %}
-                            <h1>Trending</h1>
+                            <h1 class="head">Trending</h1>
                             {% for trend in trends %}
                                     <div class="trend">
                                         <div class="inline">
@@ -62,5 +64,6 @@
             </div>
         </div>
      <script src="/static/js/base.js" type="text/javascript"></script>
+    {{ debug }}
     </body>
 </html>

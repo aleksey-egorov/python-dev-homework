@@ -12,6 +12,7 @@ class Question(models.Model):
     tags = models.CharField(max_length=255)
     pub_date = models.DateTimeField('date published')
     votes = models.IntegerField(default=0)
+    answers = models.IntegerField(default=0)
     author = models.IntegerField(default=0)
 
     def published(self):
@@ -49,9 +50,15 @@ class Question(models.Model):
             self.votes = 0
         self.save()
 
-    def active_vote(self):
-        if QuestionVote.objects.filter(reference=self, author=self.author).exists():
-            existing_vote = QuestionVote.objects.get(reference=self, author=self.author)
+    def recount_answers(self):
+        self.answers = Answer.objects.filter(question=self).count()
+        if self.answers == None:
+            self.answers = 0
+        self.save()
+
+    def active_vote(self, user_id):
+        if QuestionVote.objects.filter(reference=self, author=user_id).exists():
+            existing_vote = QuestionVote.objects.get(reference=self, author=user_id)
             return existing_vote.value
 
 
@@ -84,10 +91,23 @@ class Answer(models.Model):
         user = User.objects.get(id=self.author)
         return user.profile.avatar
 
-    def active_vote(self):
-        if AnswerVote.objects.filter(reference=self, author=self.author).exists():
-            existing_vote = AnswerVote.objects.get(reference=self, author=self.author)
+    def active_vote(self, user_id):
+        if AnswerVote.objects.filter(reference=self, author=user_id).exists():
+            existing_vote = AnswerVote.objects.get(reference=self, author=user_id)
             return existing_vote.value
+
+@receiver(post_save, sender=Answer)
+def create_answer(sender, instance, created, **kwargs):
+    if created:
+        instance.question.recount_answers()
+
+@receiver(post_save, sender=Answer)
+def update_answer(sender, instance, **kwargs):
+    instance.question.recount_answers()
+
+@receiver(post_delete, sender=Answer)
+def delete_answer(sender, instance, **kwargs):
+    instance.question.recount_answers()
 
 
 class AnswerVote(models.Model):

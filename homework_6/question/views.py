@@ -5,18 +5,22 @@ from django.views.generic import View
 from django.db import transaction
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db.models import Q
+from django.contrib.auth.mixins import LoginRequiredMixin
 
+from common.models import Mailer
 from question.models import Question, Trend, Answer, AnswerVote, QuestionVote
 from .forms import AskForm, AnswerForm
 
 # Create your views here.
 
-class AskView(View):
+class AskView(LoginRequiredMixin, View):
 
     def get(self, request):
         form = AskForm()
-
-        return render(request, "question/ask.html", {"trends": Trend.get_trends(), "form": form.as_ul() })
+        return render(request, "question/ask.html", {
+            "trends": Trend.get_trends(),
+            "form": form
+        })
 
     def post(self, request):
         form = AskForm(request.POST)
@@ -31,7 +35,7 @@ class AskView(View):
         else:
             message = 'Error while adding'
             return render(request, "question/ask.html", {
-                "form": form.as_ul(),
+                "form": form,
                 "message": message,
                 "trends": Trend.get_trends()
             })
@@ -42,36 +46,44 @@ class QuestionView(View):
     def get(self, request, id):
         form = AnswerForm()
         quest = Question.objects.get(id=id)
-        answers = Answer.objects.filter(question=quest)
+        answers_set = Answer.objects.filter(question=quest).order_by('-pub_date')
+        quest.active_user_vote = quest.active_vote(request.user.id)
+        answers = []
+        for answer in answers_set:
+            answer.active_user_vote = answer.active_vote(request.user.id)
+            answers.append(answer)
 
         return render(request, "question/question.html", {
             "trends": Trend.get_trends(),
-            "form": form.as_ul(),
+            "form": form,
             "question": quest,
             "answers": answers
         })
 
     def post(self, request, id):
-        form = AnswerForm(request.POST)
-        if form.is_valid():
-            quest = Question.objects.get(id=id)
-            new_answer = Answer(content=form.cleaned_data['answer'],
-                                  question=quest,
-                                  pub_date=datetime.datetime.now(),
-                                  author=request.user.id)
-            new_answer.save()
-            return HttpResponseRedirect('/question/' + str(new_answer.question.id) + '/')
-        else:
-            message = 'Error while adding'
-            return render(request, "question/question.html", {
-                "form": form.as_ul(),
-                "id": id,
-                "message": message,
-                "trends": Trend.get_trends()
-            })
+        if request.user.is_authenticated:
+            form = AnswerForm(request.POST)
+            if form.is_valid():
+                quest = Question.objects.get(id=id)
+                new_answer = Answer(content=form.cleaned_data['answer'],
+                                      question=quest,
+                                      pub_date=datetime.datetime.now(),
+                                      author=request.user.id)
+                new_answer.save()
+
+                Mailer.send(quest.author.email, 'new_answer', new_answer.question.id)
+                return HttpResponseRedirect('/question/' + str(new_answer.question.id) + '/')
+            else:
+                message = 'Error while adding'
+                return render(request, "question/question.html", {
+                    "form": form,
+                    "id": id,
+                    "message": message,
+                    "trends": Trend.get_trends()
+                })
 
 
-class VoteView(View):
+class VoteView(LoginRequiredMixin, View):
 
     def get(self, request):
         type =  request.GET.get('type')
@@ -116,7 +128,7 @@ class VoteView(View):
         })
 
 
-class BestAnswerView(View):
+class BestAnswerView(LoginRequiredMixin, View):
 
     def get(self, request):
         answer_id = int(request.GET.get('id'))

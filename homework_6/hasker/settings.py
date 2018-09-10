@@ -137,3 +137,14 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 LOGOUT_REDIRECT_URL = '/'
 LOGIN_REDIRECT_URL = '/'
+LOGIN_URL = '/login/'
+
+EMAIL_FROM = 'info@daiteco.ru'
+EMAIL_MESSAGES = {
+    'new_answer': [
+        'Hasker - added new answer to your question',
+        'Hello!<br>New answer have been added, you can find it on this page:'
+    ]
+}
+
+EMAIL_SIGN = 'Hasker'

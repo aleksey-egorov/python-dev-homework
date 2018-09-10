@@ -19,11 +19,11 @@
                         <ul class="list_content">
                             <li class="w10">
                                 <div class="digit">{{ question.votes }}</div>
-                                <div class="sign">Votes</div>
+                                <div class="signa">Votes</div>
                             </li>
                             <li class="w10">
                                 <div class="digit">{{ question.answers }}</div>
-                                <div class="sign">Answers</div>
+                                <div class="signa">Answers</div>
                             </li>
                             <li class="w60">
                                 <div class="quest_cnt">
@@ -57,7 +57,7 @@
                     {% endif %}
 
                     <span class="current">
-                        Page {{ questions.number }} of {{ questions.paginator.num_pages }}.
+                        Page {{ questions.number }} of {{ questions.paginator.num_pages }}
                     </span>
 
                     {% if questions.has_next %}

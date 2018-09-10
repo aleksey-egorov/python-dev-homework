@@ -24,6 +24,11 @@
     text-align:center;
 }
 
+#questions_ul .list_content > li .signa{
+    padding-top:2px;
+
+}
+
 #questions_ul .list_content > li .tags{
     display:block;
     margin-top:4px;
@@ -48,8 +53,17 @@
     padding-left:20px;
 }
 
+#questions_ul .list_content > li .sign{
+    padding-top:5px;
+
+}
+
+
 #questions_ul a.head {
     font-size:1.2em;
+}
+#questions_ul a.head:hover {
+    color:#ef0000;
 }
 #questions_ul .digit {
     font-size:1.2em;
