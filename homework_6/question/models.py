@@ -13,7 +13,8 @@ class Question(models.Model):
     pub_date = models.DateTimeField('date published')
     votes = models.IntegerField(default=0)
     answers = models.IntegerField(default=0)
-    author = models.IntegerField(default=0)
+    #author_old = models.IntegerField(default=0)
+    author = models.ForeignKey(User, on_delete=models.CASCADE, default=0)
 
     def published(self):
         delta = timezone.now() - self.pub_date
@@ -33,12 +34,10 @@ class Question(models.Model):
             return str(delta.seconds) + " " + name
 
     def author_name(self):
-        user = User.objects.get(id=self.author)
-        return user.username
+        return self.author.username
 
     def author_avatar(self):
-        user = User.objects.get(id=self.author)
-        return user.profile.avatar
+        return self.author.profile.avatar
 
     def tags_list(self):
         return self.tags.split(",")
@@ -71,7 +70,8 @@ class Trend(object):
 class Answer(models.Model):
     content = models.TextField()
     question = models.ForeignKey(Question, on_delete=models.CASCADE, default=0)
-    author = models.IntegerField(default=0)
+    #author_old = models.IntegerField(default=0)
+    author = models.ForeignKey(User, on_delete=models.CASCADE, default=0)
     pub_date = models.DateTimeField('date published')
     votes = models.IntegerField(default=0)
     best = models.BooleanField(default=False)
@@ -84,12 +84,10 @@ class Answer(models.Model):
         self.save()
 
     def author_name(self):
-        user = User.objects.get(id=self.author)
-        return user.username
+        return self.author.username
 
     def author_avatar(self):
-        user = User.objects.get(id=self.author)
-        return user.profile.avatar
+        return self.author.profile.avatar
 
     def active_vote(self, user_id):
         if AnswerVote.objects.filter(reference=self, author=user_id).exists():
@@ -112,7 +110,8 @@ def delete_answer(sender, instance, **kwargs):
 
 class AnswerVote(models.Model):
     reference = models.ForeignKey(Answer, on_delete=models.CASCADE, default=0)
-    author = models.IntegerField(default=0)
+    #author_old = models.IntegerField(default=0)
+    author = models.ForeignKey(User, on_delete=models.CASCADE, default=0)
     value = models.IntegerField(default=0)
 
 @receiver(post_save, sender=AnswerVote)
@@ -131,7 +130,8 @@ def delete_answer_vote(sender, instance, **kwargs):
 
 class QuestionVote(models.Model):
     reference = models.ForeignKey(Question, on_delete=models.CASCADE, default=0)
-    author = models.IntegerField(default=0)
+    #author_old = models.IntegerField(default=0)
+    author = models.ForeignKey(User, on_delete=models.CASCADE, default=0)
     value = models.IntegerField(default=0)
 
 @receiver(post_save, sender=QuestionVote)

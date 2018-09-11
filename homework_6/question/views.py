@@ -29,7 +29,7 @@ class AskView(LoginRequiredMixin, View):
                                     content=form.cleaned_data['content'],
                                     tags=form.cleaned_data['tags'],
                                     pub_date=datetime.datetime.now(),
-                                    author=request.user.id)
+                                    author=request.user)
             new_question.save()
             return HttpResponseRedirect('/question/' + str(new_question.id) + '/')
         else:
@@ -68,11 +68,11 @@ class QuestionView(View):
                 new_answer = Answer(content=form.cleaned_data['answer'],
                                       question=quest,
                                       pub_date=datetime.datetime.now(),
-                                      author=request.user.id)
+                                      author=request.user)
                 new_answer.save()
 
                 url = '/question/' + str(new_answer.question.id) + '/'
-                Mailer.send(quest.author.email, 'new_answer', {"url": url})
+                Mailer().send(quest.author.email, 'new_answer', context={"url": url})
                 return HttpResponseRedirect(url)
             else:
                 message = 'Error while adding'
@@ -105,8 +105,8 @@ class VoteView(LoginRequiredMixin, View):
                 vote = QuestionVote
                 ref_obj = Question.objects.get(id=obj_id)
 
-            if vote.objects.filter(reference=ref_obj, author=request.user.id).exists():
-                existing_vote = vote.objects.get(reference=ref_obj, author=request.user.id)
+            if vote.objects.filter(reference=ref_obj, author=request.user).exists():
+                existing_vote = vote.objects.get(reference=ref_obj, author=request.user)
                 if existing_vote.value == val:
                     existing_vote.delete()
                     result = 'delete'
@@ -117,7 +117,7 @@ class VoteView(LoginRequiredMixin, View):
                 votes = existing_vote.reference.votes
             else:
                 new_vote = vote(reference=ref_obj,
-                                author=request.user.id,
+                                author=request.user,
                                 value=val)
                 new_vote.save()
                 result = 'add'
@@ -136,7 +136,7 @@ class BestAnswerView(LoginRequiredMixin, View):
         answer = Answer.objects.get(id=answer_id)
 
         result = 'error'
-        if answer.author == request.user.id:
+        if answer.question.author == request.user:
             with transaction.atomic():
                 if answer.best == True:
                     answer.best = False

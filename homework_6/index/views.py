@@ -50,7 +50,7 @@ class SignupView(View):
             new_user.profile.avatar = form.cleaned_data['avatar']
             new_user.profile.save()
 
-            Mailer.send(new_user.email, 'sign_up', {"login": new_user.login})
+            Mailer.send(new_user.email, 'sign_up', context={"login": new_user.login})
             return HttpResponseRedirect('/signup/done/')
         else:
             message = 'Error while adding new user ' + str(form.cleaned_data)
