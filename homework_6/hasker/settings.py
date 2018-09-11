@@ -52,6 +52,13 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+]
+
 ROOT_URLCONF = 'hasker.urls'
 
 TEMPLATES = [
@@ -141,9 +148,13 @@ LOGIN_URL = '/login/'
 
 EMAIL_FROM = 'info@daiteco.ru'
 EMAIL_MESSAGES = {
+    'sign_up': [
+        'Hasker - registration',
+        'Hello!<br>You are now signed up. Your login: <%LOGIN%> <br>'
+    ],
     'new_answer': [
         'Hasker - added new answer to your question',
-        'Hello!<br>New answer have been added, you can find it on this page:'
+        'Hello!<br>New answer to your quesstion has been added. You can find it on this page: <%URL%> <br>'
     ]
 }
 

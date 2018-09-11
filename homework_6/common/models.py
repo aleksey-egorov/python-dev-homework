@@ -25,7 +25,7 @@ class Profile(models.Model):
 
 class Mailer(models.Model):
 
-    def send(self, email, alias, id):
+    def send(self, email, alias, context):
         try:
             msg = settings.EMAIL_MESSAGES[alias]
             send_mail(msg[0], msg[1],

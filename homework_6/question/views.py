@@ -71,8 +71,9 @@ class QuestionView(View):
                                       author=request.user.id)
                 new_answer.save()
 
-                Mailer.send(quest.author.email, 'new_answer', new_answer.question.id)
-                return HttpResponseRedirect('/question/' + str(new_answer.question.id) + '/')
+                url = '/question/' + str(new_answer.question.id) + '/'
+                Mailer.send(quest.author.email, 'new_answer', {"url": url})
+                return HttpResponseRedirect(url)
             else:
                 message = 'Error while adding'
                 return render(request, "question/question.html", {
