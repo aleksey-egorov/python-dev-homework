@@ -13,7 +13,6 @@ class Question(models.Model):
     pub_date = models.DateTimeField('date published')
     votes = models.IntegerField(default=0)
     answers = models.IntegerField(default=0)
-    #author_old = models.IntegerField(default=0)
     author = models.ForeignKey(User, on_delete=models.CASCADE, default=0)
 
     def published(self):
@@ -40,7 +39,9 @@ class Question(models.Model):
         return self.author.profile.avatar
 
     def tags_list(self):
-        return self.tags.split(",")
+        list = self.tags.split(",")
+        list = [x.strip() for x in list]
+        return list
 
     def recount_votes(self):
         votes = QuestionVote.objects.filter(reference=self).aggregate(models.Sum('value'))
@@ -70,7 +71,6 @@ class Trend(object):
 class Answer(models.Model):
     content = models.TextField()
     question = models.ForeignKey(Question, on_delete=models.CASCADE, default=0)
-    #author_old = models.IntegerField(default=0)
     author = models.ForeignKey(User, on_delete=models.CASCADE, default=0)
     pub_date = models.DateTimeField('date published')
     votes = models.IntegerField(default=0)
@@ -110,7 +110,6 @@ def delete_answer(sender, instance, **kwargs):
 
 class AnswerVote(models.Model):
     reference = models.ForeignKey(Answer, on_delete=models.CASCADE, default=0)
-    #author_old = models.IntegerField(default=0)
     author = models.ForeignKey(User, on_delete=models.CASCADE, default=0)
     value = models.IntegerField(default=0)
 
@@ -130,7 +129,6 @@ def delete_answer_vote(sender, instance, **kwargs):
 
 class QuestionVote(models.Model):
     reference = models.ForeignKey(Question, on_delete=models.CASCADE, default=0)
-    #author_old = models.IntegerField(default=0)
     author = models.ForeignKey(User, on_delete=models.CASCADE, default=0)
     value = models.IntegerField(default=0)
 

@@ -41,19 +41,22 @@ class SignupView(View):
         form = SignupForm(request.POST, request.FILES)
         if form.is_valid():
             # Creating user and profile
+            try:
+                with transaction.atomic():
+                    new_user = User(username=form.cleaned_data['login'],
+                                    password=make_password(form.cleaned_data['password']),
+                                    email=form.cleaned_data['email'])
+                    new_user.save()
+                new_user.profile.avatar = form.cleaned_data['avatar']
+                new_user.profile.save()
 
-            with transaction.atomic():
-                new_user = User(username=form.cleaned_data['login'],
-                                password=make_password(form.cleaned_data['password']),
-                                email=form.cleaned_data['email'])
-                new_user.save()
-            new_user.profile.avatar = form.cleaned_data['avatar']
-            new_user.profile.save()
-
-            Mailer.send(new_user.email, 'sign_up', context={"login": new_user.login})
-            return HttpResponseRedirect('/signup/done/')
+                Mailer().send(new_user.email, 'sign_up', context={"login": new_user.username})
+                return HttpResponseRedirect('/signup/done/')
+            except Exception as error:
+                message = 'Error while adding new user: ' + str(error)
         else:
-            message = 'Error while adding new user ' + str(form.cleaned_data)
+            message = 'Error while adding new user, check fields '
+
         return render(request, "index/signup.html", {
             "form": form,
             "message": message,

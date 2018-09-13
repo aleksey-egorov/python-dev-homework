@@ -1,3 +1,8 @@
+* {
+    margin:0;
+    padding:0;
+}
+
 html {
     font-size:100%;
     font-family:Arial;
@@ -25,6 +30,7 @@ h1 {
     text-align: left;
     padding-top:0px;
     margin-top:0px;
+    margin-bottom:20px;
 }
 h1.head {
     text-align:center;
@@ -37,6 +43,8 @@ a {
     list-style: none;
     color: red;
     font-size:0.7em;
+    margin-left:110px;
+    padding-bottom:5px;
 }
 
 form.common {
@@ -59,9 +67,10 @@ form.common label {
 form.common input[type=text], form.common input[type=password], form.common input[type=file] {
     -moz-box-sizing: border-box;
     box-sizing: border-box;
+     display: inline-block;
     border: 1px solid #999;
     width:300px;
-    display:block;
+
     float:left;
     margin-bottom: 10px;
 }
@@ -86,6 +95,7 @@ form.common .form_ul > li {
     display:block;
     min-height:30px;
     margin-bottom:10px;
+    clear:both;
 }
 form.common .form_ul input[type=text] {
     width:500px;
@@ -256,6 +266,7 @@ input[type=text], input[type=password], input[type=email] {
 }
 #trending {
     padding-top:20px;
+    padding-bottom:10px;
 }
 
 #trending .ask_wrap {
@@ -291,4 +302,8 @@ input[type=text], input[type=password], input[type=email] {
     float:left;
     font-size:1em;
     padding: 5px 0px 0px 10px;
+}
+
+.pagination {
+    margin-top:10px;
 }

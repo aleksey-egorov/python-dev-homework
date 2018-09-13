@@ -27,6 +27,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['test.daiteco.ru']
 
+SITE_URL = 'test.daiteco.ru'
+
 
 # Application definition
 
@@ -150,12 +152,12 @@ EMAIL_FROM = 'info@daiteco.ru'
 EMAIL_MESSAGES = {
     'sign_up': [
         'Hasker - registration',
-        'Hello!<br>You are now signed up. Your login: <%LOGIN%> <br>'
+        'Hello!<br>You are now signed up. Your login: <%LOGIN%> <br><br>'
     ],
     'new_answer': [
         'Hasker - added new answer to your question',
-        'Hello!<br>New answer to your quesstion has been added. You can find it on this page: <%URL%> <br>'
+        'Hello!<br>New answer to your question has been added. You can find it on this page: <%LINK%> <br><br>'
     ]
 }
 
-EMAIL_SIGN = 'Hasker'
+EMAIL_SIGN = 'With best wishes,<br>Hasker'

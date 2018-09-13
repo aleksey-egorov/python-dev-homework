@@ -6,6 +6,7 @@ from django.db import transaction
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db.models import Q
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.conf import settings
 
 from common.models import Mailer
 from question.models import Question, Trend, Answer, AnswerVote, QuestionVote
@@ -46,12 +47,16 @@ class QuestionView(View):
     def get(self, request, id):
         form = AnswerForm()
         quest = Question.objects.get(id=id)
-        answers_set = Answer.objects.filter(question=quest).order_by('-pub_date')
+        answers_set = Answer.objects.filter(question=quest).order_by('-votes','-pub_date')
         quest.active_user_vote = quest.active_vote(request.user.id)
         answers = []
         for answer in answers_set:
             answer.active_user_vote = answer.active_vote(request.user.id)
             answers.append(answer)
+
+        paginator = Paginator(answers, 30)
+        page = request.GET.get('page')
+        answers = paginator.get_page(page)
 
         return render(request, "question/question.html", {
             "trends": Trend.get_trends(),
@@ -71,11 +76,14 @@ class QuestionView(View):
                                       author=request.user)
                 new_answer.save()
 
-                url = '/question/' + str(new_answer.question.id) + '/'
-                Mailer().send(quest.author.email, 'new_answer', context={"url": url})
+                url = 'http://' + settings.SITE_URL + '/question/' + str(new_answer.question.id) + '/'
+                link = '<a href="'+ url +'">' + url + '</a>'
+                Mailer().send(quest.author.email, 'new_answer', context={"link": link})
+
                 return HttpResponseRedirect(url)
             else:
                 message = 'Error while adding'
+
                 return render(request, "question/question.html", {
                     "form": form,
                     "id": id,

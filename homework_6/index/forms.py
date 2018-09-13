@@ -20,6 +20,9 @@ class SignupForm(forms.Form):
     password2 = forms.CharField(widget=forms.PasswordInput, label='Repeat password', max_length=200)
     avatar = forms.ImageField(label='Avatar')
 
-#class UserSettingsForm(forms.Form):
-#    email = forms.EmailField(label='Email', max_length=200)
-#    avatar = forms.ImageField(label='Avatar')
+    def clean_login(self):
+        login = self.cleaned_data['login']
+        if User.objects.filter(username=login).exists():
+            raise forms.ValidationError('User with login "' + login+ '" already exists')
+        return login
+

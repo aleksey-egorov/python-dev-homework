@@ -69,6 +69,9 @@
     font-size:1.2em;
 }
 
+#question_filter {
+    margin-bottom:20px;
+}
 
 #question_filter a {
     color:#aaa;

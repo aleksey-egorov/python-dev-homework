@@ -7,10 +7,10 @@ class AskForm(forms.Form):
     tags = forms.CharField(label='Tags', max_length=200)
 
     def clean_tags(self):
-        dtags = self.cleaned_data['tags']
-        if dtags:
+        dtags = self.cleaned_data['tags'].split(",")
+        if len(dtags) > 3:
             raise forms.ValidationError('You can use up to 3 tags')
-        return dtags
+        return self.cleaned_data['tags']
 
 
 class AnswerForm(forms.Form):
