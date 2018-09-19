@@ -31,7 +31,7 @@ def dot_rename(path):
     os.rename(path, os.path.join(head, "." + fn))
 
 
-def insert_appsinstalled(memc_addr, appsinstalled, dry_run=False):
+def insert_appsinstalled(memc_addr, appsinstalled, dry_run=False, name='', line_num=0):
     ua = appsinstalled_pb2.UserApps()
     ua.lat = appsinstalled.lat
     ua.lon = appsinstalled.lon
@@ -55,6 +55,7 @@ def insert_appsinstalled(memc_addr, appsinstalled, dry_run=False):
                 result = False
         else:
             logging.exception("Error connecting to %s" % (memc_addr))
+        print ('{}: {} {} {}'.format(line_num, name, key, result))
         return result
 
     return False
@@ -91,7 +92,7 @@ def main(options):
         logging.info('Processing %s' % fn)
 
         # Parsing strings with multiple workers
-        queue = Queue(maxsize=300)
+        queue = Queue(maxsize=500)
         producer = Producer(queue, fn)
         producer.start()
         workers = []
@@ -102,15 +103,17 @@ def main(options):
             workers.append(worker)
 
         # Checking if parsing complete
-        while True:
+        checking = True
+        while checking:
             time.sleep(10)
-            #logging.info("Unfinished tasks: {}".format(queue.unfinished_tasks))
+            logging.info("Unfinished tasks: {}".format(queue.unfinished_tasks))
             if producer.task_complete and queue.unfinished_tasks == 0:
                 logging.info("Producer and workers finished tasks")
                 for worker in workers:
                     processed += worker.processed
                     errors += worker.errors
-                break
+                logging.info("Exit ... ")
+                checking = False
 
         # Checking parsing results
         if not processed:
@@ -175,6 +178,7 @@ class Producer(threading.Thread):
                     chunk_num += 1
             self.queue.put(chunk)
             self.task_complete = True
+            self.queue.join()
         except:
             logging.exception("Error reading file: %s" % (self.fn))
 
@@ -202,6 +206,7 @@ class Worker(threading.Thread):
         """
         while True:
             chunk = self.queue.get()
+            print ('Th {} chunk {}'.format(self.name, len(chunk)))
             for line_num, line in chunk:
                 line = line.strip()
                 if not line:
@@ -215,7 +220,7 @@ class Worker(threading.Thread):
                     self.errors += 1
                     logging.error("Unknown device type: %s" % appsinstalled.dev_type)
                     continue
-                ok = insert_appsinstalled(memc_addr, appsinstalled, self.options.dry)
+                ok = insert_appsinstalled(memc_addr, appsinstalled, self.options.dry, self.name, line_num)
                 if ok:
                     self.processed += 1
                 else:
