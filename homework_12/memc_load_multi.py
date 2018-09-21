@@ -55,7 +55,7 @@ def insert_appsinstalled(memc_addr, appsinstalled, dry_run=False, name='', line_
                 result = False
         else:
             logging.exception("Error connecting to %s" % (memc_addr))
-        print ('{}: {} {} {}'.format(line_num, name, key, result))
+        print('{}: {} {} {}'.format(line_num, name, key, result))
         return result
 
     return False
@@ -92,7 +92,7 @@ def main(options):
         logging.info('Processing %s' % fn)
 
         # Parsing strings with multiple workers
-        queue = Queue(maxsize=500)
+        queue = Queue(maxsize=3000)
         producer = Producer(queue, fn)
         producer.start()
         workers = []
@@ -101,18 +101,25 @@ def main(options):
             worker = Worker(queue, opts, device_memc)
             worker.start()
             workers.append(worker)
+        producer.join()
+        queue.join()
 
         # Checking if parsing complete
         checking = True
         while checking:
             time.sleep(10)
             logging.info("Unfinished tasks: {}".format(queue.unfinished_tasks))
-            if producer.task_complete and queue.unfinished_tasks == 0:
+            time.sleep(2)
+
+           # for worker in workers:
+           #     logging.exception('[} is done - {}'.format(worker.name, worker.done()))
+            if queue.unfinished_tasks == 0:
                 logging.info("Producer and workers finished tasks")
                 for worker in workers:
                     processed += worker.processed
                     errors += worker.errors
                 logging.info("Exit ... ")
+                queue.join()
                 checking = False
 
         # Checking parsing results
@@ -159,7 +166,6 @@ class Producer(threading.Thread):
         threading.Thread.__init__(self)
         self.queue = queue
         self.fn = fn
-        self.task_complete = False
 
     def run(self):
         """
@@ -177,7 +183,7 @@ class Producer(threading.Thread):
                     chunk = []
                     chunk_num += 1
             self.queue.put(chunk)
-            self.task_complete = True
+            logging.info("Producer added last chunk")
             self.queue.join()
         except:
             logging.exception("Error reading file: %s" % (self.fn))
@@ -206,7 +212,6 @@ class Worker(threading.Thread):
         """
         while True:
             chunk = self.queue.get()
-            print ('Th {} chunk {}'.format(self.name, len(chunk)))
             for line_num, line in chunk:
                 line = line.strip()
                 if not line:
@@ -226,6 +231,10 @@ class Worker(threading.Thread):
                 else:
                     self.errors += 1
             self.queue.task_done()
+
+           # if self.queue.empty:
+           #     logging.exception("{} - Queue is empty .. waiting".format(self.name))
+           #     time.sleep(5)
 
 
 if __name__ == '__main__':
