@@ -2,9 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import sys
+import re
 import asyncio
 import logging
 import datetime
+import time
 from optparse import OptionParser
 
 import aiohttp
@@ -16,6 +18,10 @@ class Crawler():
         self.start_url = start_url
         self.parsers = [Parser(start_url), Parser(start_url+'?123')]
         self.concurrency_level = 10
+        self.cookie_jar = None
+
+    def is_active(self):
+        return True
 
     def run(self):
         logging.info('Crawler started')
@@ -51,32 +57,35 @@ class Parser():
     def __init__(self, url):
         self.url = url
         self.item = []
+        self.parsing_urls = []
 
     async def run_task(self, crawler, semaphore):
         logging.info("Processing {}".format(self.url))
 
         async with aiohttp.ClientSession(cookie_jar=crawler.cookie_jar) as session:
-            while crawler.is_active():
-                try:
-                    url = await asyncio.wait_for(self.pre_parse_urls.get(), 5)
-                    self.parsing_urls.append(url)
-                    asyncio.ensure_future(self.execute_url(url, crawler, session, semaphore))
-                except asyncio.TimeoutError:
-                    pass
+            async with session.get(self.url) as resp:
+                while crawler.is_active():
+                    try:
+                        logging.info("session={}".format(session))
+                        self.parse_urls(resp.text, '')
+
+                        asyncio.ensure_future(self.execute_url(url, crawler, session, semaphore))
+                    except asyncio.TimeoutError:
+                        pass
 
         logging.info("End processing {}".format(self.url))
 
-    async def execute_url(self, url, spider, session, semaphore):
-        html = await fetch(url, spider, session, semaphore)
+    async def execute_url(self, url, crawler, session, semaphore):
+        html = await self.fetch(url, crawler, session, semaphore)
 
         if html is None:
-            spider.error_urls.append(url)
+            crawler.error_urls.appendsel(url)
             self.pre_parse_urls.put_nowait(url)
             return None
 
-        if url in spider.error_urls:
-            spider.error_urls.remove(url)
-        spider.urls_count += 1
+        if url in crawler.error_urls:
+            crawler.error_urls.remove(url)
+        crawler.urls_count += 1
         self.parsing_urls.remove(url)
         self.done_urls.append(url)
 
@@ -84,19 +93,34 @@ class Parser():
             item = self.parse_item(html)
             await item.save()
             self.item.count_add()
-            logger.info('Parsed({}/{}): {}'.format(len(self.done_urls), len(self.filter_urls), url))
+            logging.info('Parsed({}/{}): {}'.format(len(self.done_urls), len(self.filter_urls), url))
         else:
-            spider.parse(html)
-            logger.info('Followed({}/{}): {}'.format(len(self.done_urls), len(self.filter_urls), url))
+            crawler.parse(html)
+            logging.info('Followed({}/{}): {}'.format(len(self.done_urls), len(self.filter_urls), url))
 
     def parse_urls(self, html, base_url):
         if html is None:
             return
-        for url in self.abstract_urls(html):
-            url = unescape(url)
-            if not re.match('(http|https)://', url):
-                url = urljoin(base_url, url)
-            self.add(url)
+        urls = re.match('(http|https)://', html)
+        logging.info("Found urls: {}".format(urls))
+        #url = urljoin(base_url, url)
+        #self.add(url)
+
+    async def fetch(url, crawler, session, semaphore):
+        with (await semaphore):
+            try:
+                if callable(crawler.headers):
+                    headers = crawler.headers()
+                else:
+                    headers = crawler.headers
+                async with session.get(url, headers=headers, proxy=crawler.proxy) as response:
+                    if response.status in [200, 201]:
+                        data = await response.text()
+                        return data
+                    logging.error('Error: {} {}'.format(url, response.status))
+                    return None
+            except:
+                return None
 
 
 
