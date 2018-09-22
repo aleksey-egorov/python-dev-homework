@@ -66,11 +66,37 @@ class Parser():
 
         logging.info("End processing {}".format(self.url))
 
-    def execute_url(self):
-        pass
+    async def execute_url(self, url, spider, session, semaphore):
+        html = await fetch(url, spider, session, semaphore)
 
-    def parsing_urls(self):
-        pass
+        if html is None:
+            spider.error_urls.append(url)
+            self.pre_parse_urls.put_nowait(url)
+            return None
+
+        if url in spider.error_urls:
+            spider.error_urls.remove(url)
+        spider.urls_count += 1
+        self.parsing_urls.remove(url)
+        self.done_urls.append(url)
+
+        if self.item is not None:
+            item = self.parse_item(html)
+            await item.save()
+            self.item.count_add()
+            logger.info('Parsed({}/{}): {}'.format(len(self.done_urls), len(self.filter_urls), url))
+        else:
+            spider.parse(html)
+            logger.info('Followed({}/{}): {}'.format(len(self.done_urls), len(self.filter_urls), url))
+
+    def parse_urls(self, html, base_url):
+        if html is None:
+            return
+        for url in self.abstract_urls(html):
+            url = unescape(url)
+            if not re.match('(http|https)://', url):
+                url = urljoin(base_url, url)
+            self.add(url)
 
 
 
