@@ -127,9 +127,9 @@ def main(options):
 
         err_rate = float(errors) / processed
         if err_rate < NORMAL_ERR_RATE:
-            logging.info("Acceptable error rate (%s). Successfull load" % err_rate)
+            logging.info("Acceptable error rate ({:.5d}). Successfull load".format(err_rate))
         else:
-            logging.error("High error rate (%s > %s). Failed load" % (err_rate, NORMAL_ERR_RATE))
+            logging.error("High error rate ({:.5d} > {:.5d}). Failed load".format((err_rate, NORMAL_ERR_RATE)))
         dot_rename(fn)
 
         producer.join()
@@ -269,4 +269,5 @@ if __name__ == '__main__':
     finally:
         elapsed_time = time.time() - start_time
         logging.info("Time elapsed: %s sec" % elapsed_time)
+        sys.exit(1)
 
