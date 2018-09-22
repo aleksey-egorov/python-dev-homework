@@ -216,22 +216,26 @@ class Worker(threading.Thread):
         while True:
             chunk = self.queue.get()
             for line_num, line in chunk:
-                line = line.strip()
-                if not line:
-                    continue
-                appsinstalled = parse_appsinstalled(line)
-                if not appsinstalled:
-                    self.errors += 1
-                    continue
-                memc_addr = self.device_memc.get(appsinstalled.dev_type)
-                if not memc_addr:
-                    self.errors += 1
-                    logging.error("Unknown device type: %s" % appsinstalled.dev_type)
-                    continue
-                ok = insert_appsinstalled(memc_addr, appsinstalled, self.options.dry, self.name, line_num)
-                if ok:
-                    self.processed += 1
-                else:
+                try:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    appsinstalled = parse_appsinstalled(line)
+                    if not appsinstalled:
+                        self.errors += 1
+                        continue
+                    memc_addr = self.device_memc.get(appsinstalled.dev_type)
+                    if not memc_addr:
+                        self.errors += 1
+                        logging.error("Unknown device type: %s" % appsinstalled.dev_type)
+                        continue
+                    ok = insert_appsinstalled(memc_addr, appsinstalled, self.options.dry, self.name, line_num)
+                    if ok:
+                        self.processed += 1
+                    else:
+                        self.errors += 1
+                except:
+                    logging.error("Thread error: {} ".format(self.name))
                     self.errors += 1
             self.queue.task_done()
 
