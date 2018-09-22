@@ -101,8 +101,6 @@ def main(options):
             worker = Worker(queue, opts, device_memc)
             worker.start()
             workers.append(worker)
-        producer.join()
-        queue.join()
 
         # Checking if parsing complete
         checking = True
@@ -133,6 +131,11 @@ def main(options):
         else:
             logging.error("High error rate (%s > %s). Failed load" % (err_rate, NORMAL_ERR_RATE))
         dot_rename(fn)
+
+        producer.join()
+        queue.join()
+        for worker in workers:
+            worker.join()
 
 
 def prototest():
