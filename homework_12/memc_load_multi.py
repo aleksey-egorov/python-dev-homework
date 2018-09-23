@@ -87,38 +87,47 @@ def main(options):
         "adid": options.adid,
         "dvid": options.dvid,
     }
+
     for fn in glob.iglob(options.pattern):
         processed = errors = 0
         logging.info('Processing %s' % fn)
 
-        # Parsing strings with multiple workers
+        # Init multiple workers
         queue = Queue(maxsize=3000)
-        producer = Producer(queue, fn)
-        producer.start()
+        producer = Producer(queue)
         workers = []
         for w in range(0, opts.workers):
             logging.info("Starting worker %s" % w)
             worker = Worker(queue, opts, device_memc)
             worker.start()
             workers.append(worker)
+        producer.set_filename(fn)
+        producer.start()
 
         # Checking if parsing complete
         checking = True
+        counter = 0
+        last_state = 0
         while checking:
-            time.sleep(10)
-            logging.info("Unfinished tasks: {}".format(queue.unfinished_tasks))
-            time.sleep(2)
+            logging.info("Unfinished tasks: {} Producer finished: {}".format(queue.unfinished_tasks, producer.task_complete))
+            if producer.task_complete:
+                time.sleep(2)
+                if queue.unfinished_tasks > 0:
+                    if queue.unfinished_tasks == last_state:
+                        counter += 1
+                    else:
+                        logging.info("Unfinished tasks changed, counter null")
+                        counter = 0
 
-           # for worker in workers:
-           #     logging.exception('[} is done - {}'.format(worker.name, worker.done()))
-            if queue.unfinished_tasks == 0:
-                logging.info("Producer and workers finished tasks")
-                for worker in workers:
-                    processed += worker.processed
-                    errors += worker.errors
-                logging.info("Exit ... ")
-                queue.join()
-                checking = False
+                if counter == 10 or queue.unfinished_tasks == 0:
+                    logging.info("Producer and workers finished tasks")
+                    for worker in workers:
+                        processed += worker.processed
+                        errors += worker.errors
+                    logging.info("Exit ... ")
+                    checking = False
+            else:
+                time.sleep(10)
 
         # Checking parsing results
         if not processed:
@@ -127,15 +136,20 @@ def main(options):
 
         err_rate = float(errors) / processed
         if err_rate < NORMAL_ERR_RATE:
-            logging.info("Acceptable error rate ({:.5d}). Successfull load".format(err_rate))
+            logging.info("Acceptable error rate ({:.5f}). Successfull load".format(err_rate))
         else:
-            logging.error("High error rate ({:.5d} > {:.5d}). Failed load".format((err_rate, NORMAL_ERR_RATE)))
+            logging.error("High error rate ({:.5f} > {:.5f}). Failed load".format(err_rate, NORMAL_ERR_RATE))
         dot_rename(fn)
 
         producer.join()
         queue.join()
         for worker in workers:
             worker.join()
+
+        del(producer)
+        del(queue)
+        for worker in workers:
+            del(worker)
 
 
 def prototest():
@@ -159,15 +173,18 @@ class Producer(threading.Thread):
     Produces string chunks from file
     """
 
-    def __init__(self, queue, fn):
+    def __init__(self, queue):
         """
         Constructor.
 
         @param queue queue synchronization object
-        @param fn filename
         """
         threading.Thread.__init__(self)
         self.queue = queue
+        self.fn = None
+        self.task_complete = False
+
+    def set_filename(self, fn):
         self.fn = fn
 
     def run(self):
@@ -175,21 +192,25 @@ class Producer(threading.Thread):
         Thread run method. Reads file line by line, accumulates lines into chunks
         and sends it to queue
         """
-        try:
-            chunk = []
-            chunk_num = 0
-            fd = gzip.open(self.fn)
-            for line_num, line in enumerate(fd):
-                chunk.append((line_num, line))
-                if len(chunk) == CHUNK_SIZE:
-                    self.queue.put(chunk)
-                    chunk = []
-                    chunk_num += 1
-            self.queue.put(chunk)
-            logging.info("Producer added last chunk")
-            self.queue.join()
-        except:
-            logging.exception("Error reading file: %s" % (self.fn))
+        if not self.fn == None:
+            try:
+                chunk = []
+                chunk_num = 0
+                fd = gzip.open(self.fn)
+                self.task_complete = False
+                for line_num, line in enumerate(fd):
+                    chunk.append((line_num, line))
+                    if len(chunk) == CHUNK_SIZE:
+                        self.queue.put(chunk)
+                        chunk = []
+                        chunk_num += 1
+                self.queue.put(chunk)
+                logging.info("Producer added last chunk")
+                self.task_complete = True
+                self.queue.join()
+            except:
+                logging.exception("Error reading file: %s" % (self.fn))
+
 
 
 class Worker(threading.Thread):
