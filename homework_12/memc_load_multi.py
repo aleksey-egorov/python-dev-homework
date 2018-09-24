@@ -102,6 +102,7 @@ def main(options):
             worker.start()
             workers.append(worker)
         producer.set_filename(fn)
+        producer.set_running(True)
         producer.start()
 
         # Checking if parsing complete
@@ -111,7 +112,7 @@ def main(options):
         while checking:
             logging.info("Unfinished tasks: {} Producer finished: {}".format(queue.unfinished_tasks, producer.task_complete))
             if producer.task_complete:
-                time.sleep(2)
+                time.sleep(3)
                 if queue.unfinished_tasks > 0:
                     if queue.unfinished_tasks == last_state:
                         counter += 1
@@ -127,7 +128,7 @@ def main(options):
                     logging.info("Exit ... ")
                     checking = False
             else:
-                time.sleep(10)
+                time.sleep(20)
 
         # Checking parsing results
         if not processed:
@@ -145,11 +146,12 @@ def main(options):
         queue.join()
         for worker in workers:
             worker.join()
+        logging.info("Stopping workers")
 
-        del(producer)
-        del(queue)
-        for worker in workers:
-            del(worker)
+        #del(producer)
+        #del(queue)
+        #for worker in workers:
+        #    del(worker)
 
 
 def prototest():
@@ -183,33 +185,40 @@ class Producer(threading.Thread):
         self.queue = queue
         self.fn = None
         self.task_complete = False
+        self.running = False
 
     def set_filename(self, fn):
         self.fn = fn
+
+    def set_running(self, running):
+        self.running = running
 
     def run(self):
         """
         Thread run method. Reads file line by line, accumulates lines into chunks
         and sends it to queue
         """
-        if not self.fn == None:
-            try:
-                chunk = []
-                chunk_num = 0
-                fd = gzip.open(self.fn)
-                self.task_complete = False
-                for line_num, line in enumerate(fd):
-                    chunk.append((line_num, line))
-                    if len(chunk) == CHUNK_SIZE:
-                        self.queue.put(chunk)
-                        chunk = []
-                        chunk_num += 1
-                self.queue.put(chunk)
-                logging.info("Producer added last chunk")
-                self.task_complete = True
-                self.queue.join()
-            except:
-                logging.exception("Error reading file: %s" % (self.fn))
+        while self.running:
+            if not self.fn == None:
+                try:
+                    chunk = []
+                    chunk_num = 0
+                    fd = gzip.open(self.fn)
+                    self.task_complete = False
+                    for line_num, line in enumerate(fd):
+                        chunk.append((line_num, line))
+                        if len(chunk) == CHUNK_SIZE:
+                            self.queue.put(chunk)
+                            chunk = []
+                            chunk_num += 1
+                    self.queue.put(chunk)
+                    logging.info("Producer added last chunk")
+                    self.task_complete = True
+                    self.set_filename(None)
+                    self.queue.join()
+                except:
+                    logging.exception("Error reading file: %s" % (self.fn))
+            time.sleep(10) # Waiting for another file
 
 
 
