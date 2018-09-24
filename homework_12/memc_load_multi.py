@@ -88,22 +88,23 @@ def main(options):
         "dvid": options.dvid,
     }
 
+    # Init multiple workers
+    queue = Queue(maxsize=3000)
+    producer = Producer(queue)
+    workers = []
+    for w in range(0, opts.workers):
+        logging.info("Starting worker %s" % w)
+        worker = Worker(queue, opts, device_memc)
+        worker.start()
+        workers.append(worker)
+    producer.start()
+
     for fn in glob.iglob(options.pattern):
         processed = errors = 0
         logging.info('Processing %s' % fn)
 
-        # Init multiple workers
-        queue = Queue(maxsize=3000)
-        producer = Producer(queue)
-        workers = []
-        for w in range(0, opts.workers):
-            logging.info("Starting worker %s" % w)
-            worker = Worker(queue, opts, device_memc)
-            worker.start()
-            workers.append(worker)
+        producer.init()
         producer.set_filename(fn)
-        producer.set_running(True)
-        producer.start()
 
         # Checking if parsing complete
         checking = True
@@ -142,16 +143,15 @@ def main(options):
             logging.error("High error rate ({:.5f} > {:.5f}). Failed load".format(err_rate, NORMAL_ERR_RATE))
         dot_rename(fn)
 
-        producer.join()
-        queue.join()
-        for worker in workers:
-            worker.join()
-        logging.info("Stopping workers")
+    producer.join()
+    producer.disable()
+    logging.info("Producer stopped")
+    queue.join()
+    logging.info("Queue stopped")
+    for worker in workers:
+        worker.join()
+    logging.info("Workers stopped")
 
-        #del(producer)
-        #del(queue)
-        #for worker in workers:
-        #    del(worker)
 
 
 def prototest():
@@ -185,13 +185,17 @@ class Producer(threading.Thread):
         self.queue = queue
         self.fn = None
         self.task_complete = False
-        self.running = False
+        self.running = True
 
     def set_filename(self, fn):
         self.fn = fn
 
-    def set_running(self, running):
-        self.running = running
+    def init(self):
+        self.running = True
+        self.task_complete = False
+
+    def disable(self):
+        self.running = False
 
     def run(self):
         """

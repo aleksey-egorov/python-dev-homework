@@ -5,7 +5,7 @@ import os
 import re
 import asyncio
 import logging
-import datetime
+import random
 
 import time
 from hashlib import sha1
@@ -13,7 +13,7 @@ from optparse import OptionParser
 
 import aiohttp
 
-START_URL = 'http://news.ycombinator.com'
+START_URL = 'https://news.ycombinator.com'
 EXCLUDE_URLS = ['news.ycombinator.com', 'www.ycombinator.com', 'github.com/HackerNews/API']
 WAIT_PERIOD = 60
 
@@ -31,7 +31,9 @@ class Crawler():
         self.semaphore = asyncio.Semaphore(self.concurrency_level)
         logging.info("Starting crawler ... ")
 
+
     async def check_start_page(self, loop):
+        '''Checking start page in infinite loop'''
         async with aiohttp.ClientSession(loop=loop) as session:
             while True:
                 logging.info("Checking start page ... ")
@@ -41,10 +43,11 @@ class Crawler():
                                                                                     len(self.failed_urls)))
 
     async def parse_start_page(self, loop, session):
+        '''Parsing start page, searching URLs'''
         async with session.get(START_URL) as resp:
             try:
                 content = await resp.text()
-                url_pairs = self.parse_urls(content, self.start_url)
+                url_pairs = self.parse_urls(content)
                 parsed_before = 0
 
                 for url_pair in url_pairs:
@@ -57,7 +60,84 @@ class Crawler():
             except asyncio.TimeoutError:
                 pass
 
-    def parse_urls(self, html, base_url):
+
+    async def execute_url(self, url_pair, session):
+        '''Process URL from start page news list'''
+        item_id, url = url_pair
+        html = await self.fetch(url, session)
+
+        if not html == None:
+            url_id = self.get_current_id()
+            self.parsed_urls[url_id] = self.get_hash(url)
+            logging.info("Url #{}: got content, length={}".format(url_id, len(html)))
+
+            asyncio.ensure_future(self.save_page(url_id, html))
+            asyncio.ensure_future(self.get_comments(url_id, item_id, session))
+
+        elif not url_pair in self.failed_urls:
+            self.failed_urls.append(url_pair)
+
+
+    def get_hash(self, str):
+        '''URL hash'''
+        return sha1(str.encode("utf-8")).hexdigest()
+
+
+    async def fetch(self, url, session, retry=1):
+        '''Get URL content'''
+        with (await self.semaphore):
+            try:
+                for t in range(retry):
+                    async with session.get(url) as response:
+                        if response.status in [200, 201]:
+                            data = await response.text()
+                            return data
+                    if retry > 1:
+                        await asyncio.sleep(30 * random.random())
+                logging.error('Error reading url: {},  status: {}, tries {}'.format(url, response.status, retry))
+                return None
+            except:
+                return None
+
+
+    async def get_comments(self, url_id, item_id, session):
+        '''Get all comments on particular newsline'''
+
+        sleep_time = 60 * random.random()
+        logging.info("Url #{}: sleeping {}".format(url_id, sleep_time))
+        await asyncio.sleep(sleep_time)
+        logging.info("Saving comments {} {}".format(url_id, item_id))
+        comments_url = self.start_url + "/item?id=" + str(item_id)
+
+        html = await self.fetch(comments_url, session, retry=5)
+        if not html == None:
+            asyncio.ensure_future(self.save_comment_page(url_id, html))
+            com_urls = self.parse_comments(html)
+            num = 0
+            for com_url in com_urls:
+                com_html = await self.fetch(com_url, session, retry=5)
+
+                if not com_html == None:
+                    asyncio.ensure_future(self.save_comment_url(url_id, com_html, num))
+                num += 1
+
+
+    async def save_page(self, url_id, html):
+        '''Save main news page'''
+        await self.save_content(url_id, 'page.html', html)
+
+
+    async def save_comment_page(self, url_id, html):
+        '''Save comment page'''
+        await self.save_content(url_id, 'comments.html', html)
+
+
+    async def save_comment_url(self, url_id, html, num):
+        '''Save comment URL content'''
+        await self.save_content(url_id, 'comment_link_' + str(num) + '.html', html)
+
+
+    def parse_urls(self, html):
         if html is None:
             logging.error("HTML is none")
             return
@@ -70,77 +150,48 @@ class Crawler():
 
             for url in urls:
                 url_str = url[0] + '://' + url[1]
-                exclude = False
-                for exc in EXCLUDE_URLS:
-                    if exc in url_str:
-                        exclude = True
-                if not exclude:
+                if not self.in_excluded(url_str):
                     checked_urls.append([id, url_str])
-
         return checked_urls
 
-    async def execute_url(self, url_pair, session):
-        item_id, url = url_pair
-        html = await self.fetch(url, session)
 
-        if not html == None:
-            url_id = self.get_current_id()
-            self.parsed_urls[url_id] = self.get_hash(url)
-            logging.info("Url #{}: got content, length={}".format(url_id, len(html)))
+    def parse_comments(self, html):
+        if html is None:
+            logging.error("HTML is none")
+            return
 
-            asyncio.ensure_future(self.save_content(url_id, html))
-            asyncio.ensure_future(self.save_comments(url_id, item_id))
+        checked_urls = []
+        urls = re.findall(r'\<a href=\"(http|https)://(.*?)\"', html)
+        for url in urls:
+            url_str = url[0] + '://' + url[1]
+            if not self.in_excluded(url_str):
+                checked_urls.append(url_str)
+        return checked_urls
 
-        elif not url in self.failed_urls:
-            self.failed_urls.append(url_pair)
 
-    def get_hash(self, str):
-        return sha1(str.encode("utf-8")).hexdigest()
-
-    async def fetch(self, url, session):
-        with (await self.semaphore):
-            try:
-                async with session.get(url) as response:
-                    if response.status in [200, 201]:
-                        data = await response.text()
-                        return data
-                    logging.error('Error reading url: {},  status: {}'.format(url, response.status))
-                    return None
-            except:
-                #logging.info('Fetch return None')
-                return None
-
-    async def save_content(self, url_id, html):
+    async def save_content(self, url_id, file, html):
         path = os.path.abspath(os.path.join(self.save_dir, "newsline_" + str(url_id)))
         try:
             if not os.path.isdir(path):
                 os.mkdir(path)
-            filename = os.path.join(path, 'page.html')
+            filename = os.path.join(path, file)
             with open(filename, 'w') as f:
                 f.write(html)
-                logging.info("Url #{}: content saved".format(url_id))
+                logging.info("Url #{}: content saved, file {}".format(url_id, file))
         except Exception as err:
             logging.exception("Can't save content to {}: {}".format(path, err))
 
-    async def save_comments(self, url_id, item_id):
-
-        logging.info("Saving comments {} {}".format(url_id, item_id))
-
-        path = os.path.abspath(os.path.join(self.save_dir, "newsline_" + str(url_id)))
-        try:
-            if not os.path.isdir(path):
-                os.mkdir(path)
-            #filename = os.path.join(path, 'page.html')
-            #with open(filename, 'w') as f:
-            #    f.write(html)
-            #    logging.info("Url #{}: content saved".format(url_id))
-        except Exception as err:
-            logging.exception("Can't save content to {}: {}".format(path, err))
 
     def get_current_id(self):
         self.current_url_id += 1
         return self.current_url_id
 
+
+    def in_excluded(self, url):
+        for exc in EXCLUDE_URLS:
+            if exc in url:
+                return True
+        return False
 
 
 
