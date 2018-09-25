@@ -69,7 +69,7 @@ class Crawler():
         if not html == None:
             url_id = self.get_current_id()
             self.parsed_urls[url_id] = self.get_hash(url)
-            logging.info("Url #{}: got content, length={}".format(url_id, len(html)))
+            logging.info("Url #{}: got main page, length={}".format(url_id, len(html)))
 
             asyncio.ensure_future(self.save_page(url_id, html))
             asyncio.ensure_future(self.get_comments(url_id, item_id, session))
@@ -91,6 +91,7 @@ class Crawler():
                     async with session.get(url) as response:
                         if response.status in [200, 201]:
                             data = await response.text()
+                            #logging.info("Got url content {}, length={}".format(url, len(data)))
                             return data
                     if retry > 1:
                         await asyncio.sleep(30 * random.random())
@@ -104,20 +105,19 @@ class Crawler():
         '''Get all comments on particular newsline'''
 
         sleep_time = 60 * random.random()
-        logging.info("Url #{}: sleeping {}".format(url_id, sleep_time))
         await asyncio.sleep(sleep_time)
-        logging.info("Saving comments {} {}".format(url_id, item_id))
         comments_url = self.start_url + "/item?id=" + str(item_id)
 
         html = await self.fetch(comments_url, session, retry=5)
         if not html == None:
+            logging.info("Url #{}: got comment page, length={}".format(url_id, len(html)))
             asyncio.ensure_future(self.save_comment_page(url_id, html))
             com_urls = self.parse_comments(html)
             num = 0
             for com_url in com_urls:
                 com_html = await self.fetch(com_url, session, retry=5)
-
                 if not com_html == None:
+                    logging.info("Url #{}: got comment url content, length={}".format(url_id, len(html)))
                     asyncio.ensure_future(self.save_comment_url(url_id, com_html, num))
                 num += 1
 
@@ -161,9 +161,9 @@ class Crawler():
             return
 
         checked_urls = []
-        urls = re.findall(r'\<a href=\"(http|https)://(.*?)\"', html)
+        urls = re.findall(r'\<a href=\"(http|https):(.*?)\"', html)
         for url in urls:
-            url_str = url[0] + '://' + url[1]
+            url_str = url[0] + ':' + url[1]
             if not self.in_excluded(url_str):
                 checked_urls.append(url_str)
         return checked_urls
@@ -207,10 +207,8 @@ if __name__ == '__main__':
 
     # Обработка параметров скрипта
     op = OptionParser()
-    op.add_option("--dry", action="store_true", default=False)
     op.add_option("--log", action="store", default=None)
     op.add_option("--save_dir", action="store", default='./content/')
-    op.add_option("--workers", action="store", default=1)
     (opts, args) = op.parse_args()
 
     # Инициализация лога и запуск скрипта

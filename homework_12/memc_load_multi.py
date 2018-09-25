@@ -143,12 +143,14 @@ def main(options):
             logging.error("High error rate ({:.5f} > {:.5f}). Failed load".format(err_rate, NORMAL_ERR_RATE))
         dot_rename(fn)
 
-    producer.join()
+
     producer.disable()
+    producer.join()
     logging.info("Producer stopped")
     queue.join()
     logging.info("Queue stopped")
     for worker in workers:
+        worker.disable()
         worker.join()
     logging.info("Workers stopped")
 
@@ -242,12 +244,16 @@ class Worker(threading.Thread):
         self.device_memc = device_memc
         self.processed = 0
         self.errors = 0
+        self.running = True
+
+    def disable(self):
+        self.running = False
 
     def run(self):
         """
         Thread run method. Parses chunk and loads it to Memcache.
         """
-        while True:
+        while self.running:
             chunk = self.queue.get()
             for line_num, line in chunk:
                 try:
