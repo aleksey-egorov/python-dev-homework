@@ -144,7 +144,7 @@ def main(options):
         dot_rename(fn)
 
 
-    producer.disable()
+    #producer.disable()
     producer.join()
     logging.info("Producer stopped")
     queue.join()

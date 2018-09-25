@@ -15,7 +15,7 @@ import aiohttp
 
 START_URL = 'https://news.ycombinator.com'
 EXCLUDE_URLS = ['news.ycombinator.com', 'www.ycombinator.com', 'github.com/HackerNews/API']
-WAIT_PERIOD = 60
+WAIT_PERIOD = 600
 
 
 class Crawler():
@@ -212,7 +212,7 @@ if __name__ == '__main__':
     (opts, args) = op.parse_args()
 
     # Инициализация лога и запуск скрипта
-    logging.basicConfig(filename=opts.log, level=logging.INFO if not opts.dry else logging.DEBUG,
+    logging.basicConfig(filename=opts.log, level=logging.INFO,
                         format='[%(asctime)s] %(levelname).1s %(message)s', datefmt='%Y.%m.%d %H:%M:%S')
 
     main(opts)
