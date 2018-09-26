@@ -143,8 +143,8 @@ def main(options):
             logging.error("High error rate ({:.5f} > {:.5f}). Failed load".format(err_rate, NORMAL_ERR_RATE))
         dot_rename(fn)
 
-
-    #producer.disable()
+    logging.info("Closing all")
+    producer.disable()
     producer.join()
     logging.info("Producer stopped")
     queue.join()

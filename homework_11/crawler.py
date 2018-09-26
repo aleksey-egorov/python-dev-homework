@@ -205,13 +205,11 @@ def main(opts):
 
 if __name__ == '__main__':
 
-    # Обработка параметров скрипта
     op = OptionParser()
     op.add_option("--log", action="store", default=None)
     op.add_option("--save_dir", action="store", default='./content/')
     (opts, args) = op.parse_args()
 
-    # Инициализация лога и запуск скрипта
     logging.basicConfig(filename=opts.log, level=logging.INFO,
                         format='[%(asctime)s] %(levelname).1s %(message)s', datefmt='%Y.%m.%d %H:%M:%S')
 
