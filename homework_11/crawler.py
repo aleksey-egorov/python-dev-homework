@@ -170,6 +170,8 @@ class Crawler():
 
 
     async def save_content(self, url_id, file, html):
+        if not os.path.isdir(os.path.abspath(self.save_dir)):
+            os.mkdir(os.path.abspath(self.save_dir))
         path = os.path.abspath(os.path.join(self.save_dir, "newsline_" + str(url_id)))
         try:
             if not os.path.isdir(path):
