@@ -6,12 +6,13 @@ import re
 import asyncio
 import logging
 import random
+import aiohttp
 
-import time
 from hashlib import sha1
 from optparse import OptionParser
 
-import aiohttp
+
+
 
 START_URL = 'https://news.ycombinator.com'
 EXCLUDE_URLS = ['news.ycombinator.com', 'www.ycombinator.com', 'github.com/HackerNews/API']
@@ -22,7 +23,7 @@ class Crawler():
 
     def __init__(self, opts):
         self.start_url = START_URL
-        self.concurrency_level = 10
+        self.concurrency_level = 30
         self.cookie_jar = None
         self.current_url_id = 0
         self.save_dir = opts.save_dir
@@ -113,6 +114,7 @@ class Crawler():
             logging.info("Url #{}: got comment page, length={}".format(url_id, len(html)))
             asyncio.ensure_future(self.save_comment_page(url_id, html))
             com_urls = self.parse_comments(html)
+            logging.info("Url #{}: found {} links in comments".format(url_id, len(com_urls)))
             num = 0
             for com_url in com_urls:
                 com_html = await self.fetch(com_url, session, retry=5)
@@ -164,6 +166,7 @@ class Crawler():
         urls = re.findall(r'\<a href=\"(http|https):(.*?)\"', html)
         for url in urls:
             url_str = url[0] + ':' + url[1]
+            url_str = url_str.replace('&#x2F;', '/')
             if not self.in_excluded(url_str):
                 checked_urls.append(url_str)
         return checked_urls
