@@ -147,12 +147,17 @@ def main(options):
     producer.disable()
     producer.join()
     logging.info("Producer stopped")
+
     queue.join()
     logging.info("Queue stopped")
+
     for worker in workers:
         worker.disable()
-        worker.join()
-    logging.info("Workers stopped")
+        logging.info("Worker {} disable".format(worker))
+        #worker.join()
+        logging.info("Worker {} stopped".format(worker))
+
+
 
 
 
@@ -225,6 +230,7 @@ class Producer(threading.Thread):
                 except:
                     logging.exception("Error reading file: %s" % (self.fn))
             time.sleep(10) # Waiting for another file
+        self.join()
 
 
 
@@ -278,10 +284,8 @@ class Worker(threading.Thread):
                     logging.error("Thread error: {} ".format(self.name))
                     self.errors += 1
             self.queue.task_done()
-
-           # if self.queue.empty:
-           #     logging.exception("{} - Queue is empty .. waiting".format(self.name))
-           #     time.sleep(5)
+            logging.info("Got disable sign: {} ".format(self.name))
+        self.join()
 
 
 if __name__ == '__main__':
@@ -313,5 +317,5 @@ if __name__ == '__main__':
     finally:
         elapsed_time = time.time() - start_time
         logging.info("Time elapsed: %s sec" % elapsed_time)
-        sys.exit(1)
+        #sys.exit(1)
 
