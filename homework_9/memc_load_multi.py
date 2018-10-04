@@ -143,17 +143,15 @@ def main(options):
             logging.error("High error rate ({:.5f} > {:.5f}). Failed load".format(err_rate, NORMAL_ERR_RATE))
         dot_rename(fn)
 
+    # Stop everything
     logging.info("Closing all")
     producer.disable()
     producer.join()
     logging.info("Producer stopped")
-
     for worker in workers:
         worker.disable()
-        logging.info("Worker {} disable".format(worker))
-        #worker.join()
+        worker.join()
         logging.info("Worker {} stopped".format(worker))
-
     queue.join()
     logging.info("Queue stopped")
 
