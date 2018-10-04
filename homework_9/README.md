@@ -1,4 +1,4 @@
-# Python Developer - Homework #12
+# Python Developer - Homework #9
 
 ## Memc Load
 
@@ -15,7 +15,7 @@
 * log - файл логов
 * idfa, gaid, adid, dvid - адреса серверов Memcached для данных соответствующего типа
 
-### Примеры запуска
+### Пример запуска
 
 Запуск обработки файлов с 200 воркерами
 

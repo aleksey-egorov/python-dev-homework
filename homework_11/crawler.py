@@ -55,6 +55,7 @@ class Crawler():
                 pass
 
     def execute_start_page_urls(self, future):
+        '''Starting parse process with found URLs'''
         url_pairs = future.result()[0]
         session = future.result()[1]
         parsed_before = 0
@@ -127,7 +128,8 @@ class Parser():
                         await asyncio.sleep(30 * random.random())
                 logging.error('Error reading url: {},  status: {}, tries {}'.format(url, response.status, retry))
                 return None
-            except:
+            except Exception as err:
+                logging.error('Error reading url: {}: {}'.format(url, err))
                 return None
 
     def parse_urls(self, html):
