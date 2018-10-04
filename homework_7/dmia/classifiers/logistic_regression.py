@@ -186,5 +186,6 @@ class LogisticRegression:
     def append_biases(X):
         return sparse.hstack((X, np.ones(X.shape[0])[:, np.newaxis])).tocsr()
 
-    def sigmoid(self, x):
+    @staticmethod
+    def sigmoid(x):
         return 1 / (1 + np.exp(-x))
