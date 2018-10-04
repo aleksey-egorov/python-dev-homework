@@ -7,13 +7,9 @@ import asyncio
 import logging
 import random
 import aiohttp
-import time
 
 from hashlib import sha1
 from optparse import OptionParser
-
-
-
 
 START_URL = 'https://news.ycombinator.com'
 EXCLUDE_URLS = ['news.ycombinator.com', 'www.ycombinator.com', 'github.com/HackerNews/API']
@@ -55,7 +51,6 @@ class Crawler():
             try:
                 content = await resp.text()
                 url_pairs = self.parser.parse_urls(content)
-
                 future.set_result((url_pairs, session))
             except asyncio.TimeoutError:
                 pass
@@ -115,7 +110,6 @@ class Crawler():
     def get_current_id(self):
         self.current_url_id += 1
         return self.current_url_id
-
 
 
 class Parser():
@@ -206,7 +200,6 @@ class Saver():
             with open(filename, 'w') as f:
                 f.write(html)
             logging.info("Url #{}: content saved, file {}".format(url_id, file))
-
         except Exception as err:
             logging.exception("Can't save content to {}: {}".format(path, err))
 
