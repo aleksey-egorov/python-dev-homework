@@ -55,7 +55,7 @@ def insert_appsinstalled(memc_addr, appsinstalled, dry_run=False, name='', line_
                 result = False
         else:
             logging.exception("Error connecting to %s" % (memc_addr))
-        print('{}: {} {} {}'.format(line_num, name, key, result))
+        #print('{}: {} {} {}'.format(line_num, name, key, result))
         return result
 
     return False
@@ -148,17 +148,16 @@ def main(options):
     producer.join()
     logging.info("Producer stopped")
 
-    queue.join()
-    logging.info("Queue stopped")
-
     for worker in workers:
         worker.disable()
         logging.info("Worker {} disable".format(worker))
         #worker.join()
         logging.info("Worker {} stopped".format(worker))
 
+    queue.join()
+    logging.info("Queue stopped")
 
-
+    return True
 
 
 def prototest():
@@ -226,12 +225,9 @@ class Producer(threading.Thread):
                     logging.info("Producer added last chunk")
                     self.task_complete = True
                     self.set_filename(None)
-                    self.queue.join()
                 except:
                     logging.exception("Error reading file: %s" % (self.fn))
             time.sleep(10) # Waiting for another file
-        self.join()
-
 
 
 class Worker(threading.Thread):
@@ -284,8 +280,7 @@ class Worker(threading.Thread):
                     logging.error("Thread error: {} ".format(self.name))
                     self.errors += 1
             self.queue.task_done()
-            logging.info("Got disable sign: {} ".format(self.name))
-        self.join()
+        logging.info("Got disable sign: {} ".format(self.name))
 
 
 if __name__ == '__main__':
@@ -317,5 +312,5 @@ if __name__ == '__main__':
     finally:
         elapsed_time = time.time() - start_time
         logging.info("Time elapsed: %s sec" % elapsed_time)
-        #sys.exit(1)
+        sys.exit(0)
 
