@@ -36,7 +36,6 @@ class Crawler():
         async with aiohttp.ClientSession(loop=self.loop) as session:
             while True:
                 logging.info("Checking start page ... ")
-
                 future = asyncio.Future()
                 asyncio.ensure_future(self.parse_start_page(session, future))
                 future.add_done_callback(self.execute_start_page_urls)
