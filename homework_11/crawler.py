@@ -75,10 +75,8 @@ class Crawler():
             url_id = self.get_current_id()
             self.parsed_urls[url_id] = self.get_hash(url)
             logging.info("Url #{}: got main page, length={}".format(url_id, len(html)))
-
             asyncio.ensure_future(self.saver.save_page(self.loop, url_id, html))
             asyncio.ensure_future(self.get_comments(url_id, item_id, session))
-
         elif not url_pair in self.failed_urls:
             self.failed_urls.append(url_pair)
 
@@ -99,7 +97,6 @@ class Crawler():
 
             com_htmls = await self.parser.fetch_urls(self.semaphore, com_urls, session, retry=5)
             asyncio.ensure_future(self.saver.save_comment_url(self.loop, url_id, com_htmls))
-
 
     def get_current_id(self):
         self.current_url_id += 1
