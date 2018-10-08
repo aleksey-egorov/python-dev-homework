@@ -89,23 +89,17 @@ class Crawler():
     async def get_comments(self, url_id, item_id, session):
         '''Get all comments on particular newsline'''
 
-        sleep_time = 60 * random.random()
-        await asyncio.sleep(sleep_time)
         comments_url = self.start_url + "/item?id=" + str(item_id)
-
         html = await self.parser.fetch_url(self.semaphore, comments_url, session, retry=5)
-        if not html == None:
+        if not html[0] == None:
             logging.info("Url #{}: got comment page, length={}".format(url_id, len(html)))
             asyncio.ensure_future(self.saver.save_comment_page(self.loop, url_id, html))
             com_urls = self.parser.parse_comments(html)
             logging.info("Url #{}: found {} links in comments".format(url_id, len(com_urls)))
-            num = 0
-            for com_url in com_urls:
-                com_html = await self.parser.fetch_url(self.semaphore, com_url, session, retry=5)
-                if not com_html == None:
-                    logging.info("Url #{}: got comment url content, length={}".format(url_id, len(html)))
-                    asyncio.ensure_future(self.saver.save_comment_url(self.loop, url_id, com_html, num))
-                num += 1
+
+            com_htmls = await self.parser.fetch_urls(self.semaphore, com_urls, session, retry=5)
+            asyncio.ensure_future(self.saver.save_comment_url(self.loop, url_id, com_htmls))
+
 
     def get_current_id(self):
         self.current_url_id += 1
@@ -118,21 +112,39 @@ class Parser():
         '''Get URL content'''
         with (await semaphore):
             try:
-                for t in range(retry):
-                    async with session.get(url) as response:
-                        if response.status in [200, 201]:
-                            data = await response.text()
-                            # logging.info("Got url content {}, length={}".format(url, len(data)))
-                            return data
-                    if retry > 1:
-                        await asyncio.sleep(30 * random.random())
-                logging.error('Error reading url: {},  status: {}, tries {}'.format(url, response.status, retry))
-                return None
+                html = await self.get_response(url, session, retry=retry)
+                return html
             except Exception as err:
                 logging.error('Error reading url: {}: {}'.format(url, err))
-                return None
+
+    async def fetch_urls(self, semaphore, urls, session, retry=1):
+        '''Get URLs content'''
+        htmls = {}
+        for url in urls:
+            htmls[url] = self.fetch_url(semaphore, url, session, retry=retry)
+        return htmls
+
+    async def get_response(self, url, session, retry):
+        '''Read page'''
+        iter = 0
+        while True:
+            async with session.get(url) as response:
+                if response.status in [200, 201]:
+                    data = await response.text()
+                    return data
+                elif response.status in [301, 302, 307, 308]:
+                    logging.info("Redirecting {} to {}".format(url, response.headers['Location']))
+                    url = response.headers['Location']
+                    iter += 1
+                else:  # If any other status - try again
+                    iter += 1
+            if iter >= retry:
+                logging.error('Error reading url: {},  status: {}, tries {}'.format(url, response.status, retry))
+                return
+            await asyncio.sleep(30 * random.random())
 
     def parse_urls(self, html):
+        '''Search URLs on the page'''
         if html is None:
             logging.error("HTML is none")
             return
@@ -150,6 +162,7 @@ class Parser():
         return checked_urls
 
     def parse_comments(self, html):
+        '''Search comments on page'''
         if html is None:
             logging.error("HTML is none")
             return
@@ -164,6 +177,7 @@ class Parser():
         return checked_urls
 
     def in_excluded(self, url):
+        '''Check if URL is in excluded list'''
         for exc in EXCLUDE_URLS:
             if exc in url:
                 return True
@@ -185,10 +199,13 @@ class Saver():
         await loop.run_in_executor(
             None, self.save_content, url_id, 'comments.html', html)
 
-    async def save_comment_url(self, loop, url_id, html, num):
-        '''Save comment URL content'''
-        await loop.run_in_executor(
-            None, self.save_content, url_id, 'comment_link_' + str(num) + '.html', html)
+    async def save_comment_url(self, loop, url_id, htmls):
+        '''Save comment URLs content'''
+        num = 0
+        for html in htmls:
+            await loop.run_in_executor(
+                None, self.save_content, url_id, 'comment_link_' + str(num) + '.html', html)
+            num += 1
 
     def save_content(self, url_id, file, html):
         if not os.path.isdir(os.path.abspath(self.save_dir)):
