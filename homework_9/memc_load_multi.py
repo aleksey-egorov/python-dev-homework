@@ -22,43 +22,13 @@ CONNECTION_TIMEOUT = 5
 CHUNK_SIZE = 100
 NORMAL_ERR_RATE = 0.01
 AppsInstalled = collections.namedtuple("AppsInstalled", ["dev_type", "dev_id", "lat", "lon", "apps"])
-
+memc_pool = {}
 
 
 def dot_rename(path):
     head, fn = os.path.split(path)
     # atomic in most cases
     os.rename(path, os.path.join(head, "." + fn))
-
-
-def insert_appsinstalled(memc_addr, appsinstalled, dry_run=False, name='', line_num=0):
-    ua = appsinstalled_pb2.UserApps()
-    ua.lat = appsinstalled.lat
-    ua.lon = appsinstalled.lon
-    key = "%s:%s" % (appsinstalled.dev_type, appsinstalled.dev_id)
-    ua.apps.extend(appsinstalled.apps)
-    packed = ua.SerializeToString()
-
-    # @TODO persistent connection
-    # @TODO retry and timeouts!
-
-    if dry_run:
-       logging.debug("%s - %s -> %s" % (memc_addr, key, str(ua).replace("\n", " ")))
-    else:
-        result = False
-        memc = memcache.Client([memc_addr], dead_retry=CONNECTION_RETRY_TIMEOUT, socket_timeout=CONNECTION_TIMEOUT)
-
-        if memc.servers[0]._get_socket():  # connection established
-            result = memc.set(key, packed)
-            if result == 0:
-                logging.exception("Cannot write to memc %s: %s" % (memc_addr, e))
-                result = False
-        else:
-            logging.exception("Error connecting to %s" % (memc_addr))
-        #print('{}: {} {} {}'.format(line_num, name, key, result))
-        return result
-
-    return False
 
 
 def parse_appsinstalled(line):
@@ -80,6 +50,49 @@ def parse_appsinstalled(line):
     return AppsInstalled(dev_type, dev_id, lat, lon, apps)
 
 
+def insert_appsinstalled(appsinstalled, device_memc, dry_run=False, name='', line_num=0):
+
+    errors = 0
+    memc_addr = device_memc.get(appsinstalled.dev_type)
+    if not memc_addr:
+        errors += 1
+        logging.error("Unknown device type: %s" % appsinstalled.dev_type)
+        return
+
+    ua = appsinstalled_pb2.UserApps()
+    ua.lat = appsinstalled.lat
+    ua.lon = appsinstalled.lon
+    key = "%s:%s" % (appsinstalled.dev_type, appsinstalled.dev_id)
+    ua.apps.extend(appsinstalled.apps)
+    packed = ua.SerializeToString()
+
+    # @TODO persistent connection
+    # @TODO retry and timeouts!
+
+    if dry_run:
+        logging.debug("%s - %s -> %s" % (memc_addr, key, str(ua).replace("\n", " ")))
+    else:
+        result = memc_write(appsinstalled.dev_type, memc_addr, key, packed)
+        print('{}: {} {} {}'.format(line_num, name, key, result))
+        return result
+
+
+def memc_write(dev_type, memc_addr, key, packed):
+    if memc_pool.get(dev_type) == None:
+        memc_pool[dev_type] = memcache.Client([memc_addr], dead_retry=CONNECTION_RETRY_TIMEOUT, socket_timeout=CONNECTION_TIMEOUT)
+        logging.info("Opening Memcache connection, dev_type={} addr={}".format(dev_type, memc_addr))
+
+    if memc_pool[dev_type].servers[0]._get_socket():  # connection established
+        result = memc_pool[dev_type].set(key, packed)
+        if result == 0:
+            logging.exception("Cannot write to memc %s: %s" % (memc_addr, e))
+            return False
+    else:
+        logging.exception("Error connecting to %s" % (memc_addr))
+        return False
+    return True
+
+
 def main(options):
     device_memc = {
         "idfa": options.idfa,
@@ -90,51 +103,27 @@ def main(options):
 
     # Init multiple workers
     queue = Queue(maxsize=3000)
-    producer = Producer(queue)
+
     workers = []
     for w in range(0, opts.workers):
         logging.info("Starting worker %s" % w)
         worker = Worker(queue, opts, device_memc)
         worker.start()
         workers.append(worker)
-    producer.start()
 
+    producers = []
     for fn in glob.iglob(options.pattern):
         processed = errors = 0
         logging.info('Processing %s' % fn)
 
-        producer.init()
-        producer.set_filename(fn)
+        producer = Producer(queue, fn)
+        producer.start()
+        producers.append(producer)
+        producer.join()
 
-        # Checking if parsing complete
-        checking = True
-        counter = 0
-        last_state = 0
-        while checking:
-            logging.info("Unfinished tasks: {} Producer finished: {}".format(queue.unfinished_tasks, producer.task_complete))
-            if producer.task_complete:
-                time.sleep(3)
-                if queue.unfinished_tasks > 0:
-                    if queue.unfinished_tasks == last_state:
-                        counter += 1
-                    else:
-                        logging.info("Unfinished tasks changed, counter null")
-                        counter = 0
-
-                if counter == 10 or queue.unfinished_tasks == 0:
-                    logging.info("Producer and workers finished tasks")
-                    for worker in workers:
-                        processed += worker.processed
-                        errors += worker.errors
-                    logging.info("Exit ... ")
-                    checking = False
-            else:
-                time.sleep(20)
-
-        # Checking parsing results
-        if not processed:
-            dot_rename(fn)
-            continue
+        for worker in workers:
+            processed += worker.processed
+            errors += worker.errors
 
         err_rate = float(errors) / processed
         if err_rate < NORMAL_ERR_RATE:
@@ -145,15 +134,14 @@ def main(options):
 
     # Stop everything
     logging.info("Closing all")
-    producer.disable()
-    producer.join()
-    logging.info("Producer stopped")
+    for producer in producers:
+        producer.disable()
+        producer.join()
+        logging.info("Producer {} stopped".format(producer))
     for worker in workers:
         worker.disable()
         worker.join()
         logging.info("Worker {} stopped".format(worker))
-    queue.join()
-    logging.info("Queue stopped")
 
     return True
 
@@ -179,7 +167,7 @@ class Producer(threading.Thread):
     Produces string chunks from file
     """
 
-    def __init__(self, queue):
+    def __init__(self, queue, fn):
         """
         Constructor.
 
@@ -187,16 +175,9 @@ class Producer(threading.Thread):
         """
         threading.Thread.__init__(self)
         self.queue = queue
-        self.fn = None
-        self.task_complete = False
-        self.running = True
-
-    def set_filename(self, fn):
         self.fn = fn
-
-    def init(self):
-        self.running = True
         self.task_complete = False
+        self.running = True
 
     def disable(self):
         self.running = False
@@ -206,26 +187,24 @@ class Producer(threading.Thread):
         Thread run method. Reads file line by line, accumulates lines into chunks
         and sends it to queue
         """
-        while self.running:
-            if not self.fn == None:
-                try:
-                    chunk = []
-                    chunk_num = 0
-                    fd = gzip.open(self.fn)
+        if not self.fn == None:
+            try:
+                chunk = []
+                chunk_num = 0
+                with gzip.open(self.fn, 'rb') as fd:
                     self.task_complete = False
                     for line_num, line in enumerate(fd):
                         chunk.append((line_num, line))
                         if len(chunk) == CHUNK_SIZE:
                             self.queue.put(chunk)
+                            logging.info("Producer {} added chunk".format(self.name))
                             chunk = []
                             chunk_num += 1
-                    self.queue.put(chunk)
-                    logging.info("Producer added last chunk")
-                    self.task_complete = True
-                    self.set_filename(None)
-                except:
-                    logging.exception("Error reading file: %s" % (self.fn))
-            time.sleep(10) # Waiting for another file
+                self.queue.put(chunk)
+                logging.info("Producer added last chunk")
+                self.task_complete = True
+            except:
+                logging.exception("Error reading file: %s" % (self.fn))
 
 
 class Worker(threading.Thread):
@@ -245,6 +224,7 @@ class Worker(threading.Thread):
         self.processed = 0
         self.errors = 0
         self.running = True
+        self.memc = {}
 
     def disable(self):
         self.running = False
@@ -264,21 +244,17 @@ class Worker(threading.Thread):
                     if not appsinstalled:
                         self.errors += 1
                         continue
-                    memc_addr = self.device_memc.get(appsinstalled.dev_type)
-                    if not memc_addr:
-                        self.errors += 1
-                        logging.error("Unknown device type: %s" % appsinstalled.dev_type)
-                        continue
-                    ok = insert_appsinstalled(memc_addr, appsinstalled, self.options.dry, self.name, line_num)
+
+                    ok = insert_appsinstalled(appsinstalled, self.device_memc, self.options.dry, self.name, line_num)
                     if ok:
                         self.processed += 1
                     else:
                         self.errors += 1
-                except:
-                    logging.error("Thread error: {} ".format(self.name))
+                except Exception as err:
+                    logging.error("Insert error {}: {} ".format(self.name, err))
                     self.errors += 1
             self.queue.task_done()
-        logging.info("Got disable sign: {} ".format(self.name))
+
 
 
 if __name__ == '__main__':
@@ -310,5 +286,6 @@ if __name__ == '__main__':
     finally:
         elapsed_time = time.time() - start_time
         logging.info("Time elapsed: %s sec" % elapsed_time)
+        print ("Work finished")
         sys.exit(0)
 
