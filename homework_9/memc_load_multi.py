@@ -73,7 +73,7 @@ def insert_appsinstalled(appsinstalled, device_memc, dry_run=False, name='', lin
         logging.debug("%s - %s -> %s" % (memc_addr, key, str(ua).replace("\n", " ")))
     else:
         result = memc_write(appsinstalled.dev_type, memc_addr, key, packed)
-        print('{}: {} {} {}'.format(line_num, name, key, result))
+        #print('{}: {} {} {}'.format(line_num, name, key, result))
         return result
 
 
