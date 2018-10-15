@@ -169,9 +169,8 @@ class Producer(threading.Thread):
 
     def __init__(self, queue, fn):
         """
-        Constructor.
-
         @param queue queue synchronization object
+        @param fn filename
         """
         threading.Thread.__init__(self)
         self.queue = queue
@@ -211,8 +210,6 @@ class Worker(threading.Thread):
 
     def __init__(self, queue, opts, device_memc):
         """
-        Constructor.
-
         @param queue queue synchronization object
         @param opts parsing options
         @param device_memc device map
