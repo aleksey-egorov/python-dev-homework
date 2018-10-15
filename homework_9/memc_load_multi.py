@@ -84,7 +84,7 @@ def memc_write(dev_type, memc_addr, key, packed):
 
     if memc_pool[dev_type].servers[0]._get_socket():  # connection established
         result = memc_pool[dev_type].set(key, packed)
-        if result == 0:
+        if not result:
             logging.exception("Cannot write to memc %s: %s" % (memc_addr, e))
             return False
     else:
@@ -134,13 +134,13 @@ def main(options):
 
     # Stop everything
     logging.info("Closing all")
+    queue.join()
+
     for producer in producers:
         producer.disable()
-        producer.join()
         logging.info("Producer {} stopped".format(producer))
     for worker in workers:
         worker.disable()
-        worker.join()
         logging.info("Worker {} stopped".format(worker))
 
     return True
@@ -187,7 +187,7 @@ class Producer(threading.Thread):
         Thread run method. Reads file line by line, accumulates lines into chunks
         and sends it to queue
         """
-        if not self.fn == None:
+        if self.fn is not None:
             try:
                 chunk = []
                 chunk_num = 0
@@ -197,7 +197,7 @@ class Producer(threading.Thread):
                         chunk.append((line_num, line))
                         if len(chunk) == CHUNK_SIZE:
                             self.queue.put(chunk)
-                            logging.info("Producer {} added chunk".format(self.name))
+                            #logging.info("Producer {} added chunk".format(self.name))
                             chunk = []
                             chunk_num += 1
                 self.queue.put(chunk)
