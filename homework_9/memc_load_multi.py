@@ -152,7 +152,7 @@ class MemcWorker(threading.Thread):
             else:
                 self.errors += 1
             #print('Memc added: {} {}, queue: {} {}'.format(key, ok, self.memc_queue.qsize(), self.result_queue.unfinished_tasks))
-            if self.errors > 1000 or self.processed > 1000:
+            if self.errors > 1000 or self.processed > 1000:     # Saving preliminary results
                 self.send_results()
         logging.info("MemcWorker {} finished task".format(self.name))
         self.send_results()
