@@ -127,7 +127,6 @@ class MemcWorker(threading.Thread):
         self.memc_queue = memc_queue
         self.result_queue = result_queue
         self.memc_client = memc_client
-        self.task_complete = False
         self.running = True
         self.errors = 0
         self.processed = 0
@@ -165,7 +164,6 @@ class LineWorker(threading.Thread):
         self.work_queue = work_queue
         self.result_queue = result_queue
         self.fn = fn
-        self.task_complete = False
         self.errors = 0
 
     def run(self):
@@ -175,7 +173,6 @@ class LineWorker(threading.Thread):
         if self.fn is not None:
             try:
                 with gzip.open(self.fn, 'rb') as fd:
-                    self.task_complete = False
                     for line_num, line in enumerate(fd):
                         line = line.strip()
                         if not line:
@@ -185,7 +182,6 @@ class LineWorker(threading.Thread):
                             self.errors += 1
                             continue
                         self.work_queue.put((line_num, appsinstalled))
-                self.task_complete = True
                 self.result_queue.put({'errors': self.errors, 'processed': 0})
             except:
                 logging.exception("Error reading file: %s" % (self.fn))
