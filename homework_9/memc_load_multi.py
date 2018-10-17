@@ -101,7 +101,7 @@ class MemcClient():
         return True
 
 
-def prepare_protobuf(work_queue, memc_queue, result_queue, device_memc):
+def prepare_protobuf(work_queue, memc_queue, result_queue, device_memc, num):
     '''Prepares protobuf pack for Memcache load'''
     tries = 0
     while True:
@@ -112,7 +112,7 @@ def prepare_protobuf(work_queue, memc_queue, result_queue, device_memc):
         if tries == 2:
             break
         if work_queue.empty():
-            logging.info("Protobuf process: work queue is empty, waiting ...")
+            logging.info("Protobuf process {}: work queue is empty, waiting ...".format(num))
             tries += 1
             time.sleep(3)
         else:
@@ -122,8 +122,9 @@ def prepare_protobuf(work_queue, memc_queue, result_queue, device_memc):
 
 class MemcWorker(threading.Thread):
 
-    def __init__(self, memc_client, memc_queue, result_queue):
+    def __init__(self, memc_client, work_queue, memc_queue, result_queue):
         threading.Thread.__init__(self)
+        self.work_queue = work_queue
         self.memc_queue = memc_queue
         self.result_queue = result_queue
         self.memc_client = memc_client
@@ -150,7 +151,7 @@ class MemcWorker(threading.Thread):
                 self.processed += 1
             else:
                 self.errors += 1
-            #print('Memc added: {} {}, queue: {} {}'.format(key, ok, self.memc_queue.qsize(), self.result_queue.unfinished_tasks))
+            print('Memc added: {} {}, queue: {} {} {}'.format(key, ok, self.work_queue.qsize(), self.memc_queue.qsize(), self.result_queue.unfinished_tasks))
             if self.errors > 1000 or self.processed > 1000:     # Saving preliminary results
                 self.send_results()
         logging.info("MemcWorker {} finished task".format(self.name))
@@ -217,15 +218,16 @@ def main(options):
         producer.start()
 
     # Protobuf process: prepares packages from work_queue strings and sends them to memc_queue
-    proto_process = mp.Process(target=prepare_protobuf, args=(work_queue, memc_queue, result_queue, device_memc))
-    proto_process.start()
+    processes = [mp.Process(target=prepare_protobuf, args=(work_queue, memc_queue, result_queue, device_memc, x)) for x in range(1)]
+    for p in processes:
+        p.start()
 
     # Memc workers: read packages from memc_queue and send them to Memcache servers
     memc_client = MemcClient()
     memc_workers = []
     for w in range(0, opts.workers):
         logging.info("Starting memc worker %s" % w)
-        memc_worker = MemcWorker(memc_client, memc_queue, result_queue)
+        memc_worker = MemcWorker(memc_client, work_queue, memc_queue, result_queue)
         memc_worker.start()
         memc_workers.append(memc_worker)
 
@@ -234,7 +236,7 @@ def main(options):
         logging.info("Work queue: {}, memc queue: {}, result queue: {}".format(work_queue.qsize(), memc_queue.qsize(), result_queue.unfinished_tasks))
         time.sleep(10)
 
-    # Closing MemcWorkers. Protobuf process and LineWorkers are closed by themselves
+    # Closing MemcWorkers. Protobuf processes and LineWorkers are closed by themselves
     for memc_worker in memc_workers:
         memc_worker.disable()
         logging.info("MemcWorker {} stopped".format(memc_worker))
