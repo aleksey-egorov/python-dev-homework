@@ -203,8 +203,8 @@ def main(options):
     }
 
     # Init queues
-    work_queue = mp.Queue(maxsize=100000)
-    memc_queue = mp.Queue(maxsize=100000)
+    work_queue = mp.Queue(maxsize=1000000)
+    memc_queue = mp.Queue(maxsize=1000000)
     result_queue = Queue()
 
     processed = 0
