@@ -17,6 +17,7 @@ from queue import Queue
 CONNECTION_RETRY_TIMEOUT = 20
 CONNECTION_TIMEOUT = 5
 NORMAL_ERR_RATE = 0.01
+SENTINEL = '<END>'
 AppsInstalled = collections.namedtuple("AppsInstalled", ["dev_type", "dev_id", "lat", "lon", "apps"])
 
 
@@ -39,7 +40,7 @@ def parse_appsinstalled(line):
     return AppsInstalled(dev_type, dev_id, lat, lon, apps)
 
 
-def insert_appsinstalled(appsinstalled, device_memc, dry_run=False, line_num=0):
+def pack_appsinstalled(appsinstalled, device_memc, dry_run=False):
     errors = 0
     memc_addr = device_memc.get(appsinstalled.dev_type)
     if not memc_addr:
@@ -54,14 +55,10 @@ def insert_appsinstalled(appsinstalled, device_memc, dry_run=False, line_num=0):
     ua.apps.extend(appsinstalled.apps)
     packed = ua.SerializeToString()
 
-    # @TODO persistent connection
-    # @TODO retry and timeouts!
-
     if dry_run:
         logging.debug("%s - %s -> %s" % (memc_addr, key, str(ua).replace("\n", " ")))
     else:
-        #result = memc_client.write(appsinstalled.dev_type, memc_addr, key, packed)
-        return errors, appsinstalled.dev_type, memc_addr, key, packed
+        return errors, memc_addr, key, packed
 
 
 def prototest():
@@ -101,25 +98,6 @@ class MemcClient():
         return True
 
 
-def prepare_protobuf(work_queue, memc_queue, result_queue, device_memc):
-    '''Prepares protobuf pack for Memcache load'''
-    tries = 0
-    while True:
-        line_num, appsinstalled = work_queue.get()
-        errors, dev_type, memc_addr, key, packed = insert_appsinstalled(appsinstalled, device_memc, line_num=line_num)
-        memc_queue.put((dev_type, memc_addr, key, packed))
-        result_queue.put({'errors': errors, 'processed': 0})
-        if tries == 2:
-            break
-        if work_queue.empty():
-            logging.info("Protobuf process: work queue is empty, waiting ...")
-            tries += 1
-            time.sleep(3)
-        else:
-            tries = 0
-    logging.info('Protobuf process: work finished')
-
-
 class MemcWorker(threading.Thread):
 
     def __init__(self, memc_client, memc_queue, result_queue):
@@ -127,12 +105,8 @@ class MemcWorker(threading.Thread):
         self.memc_queue = memc_queue
         self.result_queue = result_queue
         self.memc_client = memc_client
-        self.running = True
         self.errors = 0
         self.processed = 0
-
-    def disable(self):
-        self.running = False
 
     def send_results(self):
         self.result_queue.put({'errors': self.errors, 'processed': self.processed})
@@ -140,58 +114,71 @@ class MemcWorker(threading.Thread):
         self.processed = 0
 
     def run(self):
-        """
-        Thread run method. Reads packages from queue and sends them to Memcache server
-        """
-        while self.running:
-            dev_type, memc_addr, key, packed = self.memc_queue.get()
+        while True:
+            val = self.memc_queue.get()
+            if val == SENTINEL:
+                self.memc_queue.put(SENTINEL)                   # Put SENTINEL back for another Memc worker
+                break
+            dev_type, memc_addr, key, packed = val
             ok = self.memc_client.write(dev_type, memc_addr, key, packed)
             if ok:
                 self.processed += 1
             else:
                 self.errors += 1
-            print('Memc added: {} {}, queue: {} {}'.format(key, ok, self.memc_queue.qsize(), self.result_queue.unfinished_tasks))
             if self.errors > 1000 or self.processed > 1000:     # Saving preliminary results
                 self.send_results()
         logging.info("MemcWorker {} finished task".format(self.name))
         self.send_results()
 
 
-class LineWorker(threading.Thread):
+def prepare_protobuf(appsinstalled, memc_queue, device_memc):
+    '''Prepares protobuf pack for Memcache load'''
+    errors, memc_addr, key, packed = pack_appsinstalled(appsinstalled, device_memc)
+    memc_queue.put((appsinstalled.dev_type, memc_addr, key, packed))
 
-    def __init__(self, work_queue, result_queue,  fn):
-        threading.Thread.__init__(self)
-        self.work_queue = work_queue
-        self.result_queue = result_queue
-        self.fn = fn
-        self.errors = 0
 
-    def run(self):
-        """
-        Thread run method. Reads file line by line and sends them to queue
-        """
-        if self.fn is not None:
-            try:
-                with gzip.open(self.fn, 'rb') as fd:
-                    for line_num, line in enumerate(fd):
-                        line = line.strip()
-                        if not line:
-                            continue
-                        appsinstalled = parse_appsinstalled(line)
-                        if not appsinstalled:
-                            self.errors += 1
-                            continue
-                        self.work_queue.put((line_num, appsinstalled))
-                self.result_queue.put({'errors': self.errors, 'processed': 0})
-            except:
-                logging.exception("Error reading file: %s" % (self.fn))
-            logging.info("LineWorker finished task: file {}, errors={}".format(self.fn, self.errors))
-
+def parse_file(fn, memc_queue, result_queue, device_memc):
+    errors = 0
+    try:
+        with gzip.open(fn, 'rb') as fd:
+            for line_num, line in enumerate(fd):
+                line = line.strip()
+                if not line:
+                    continue
+                appsinstalled = parse_appsinstalled(line)
+                if not appsinstalled:
+                    errors += 1
+                    continue
+                prepare_protobuf(appsinstalled, memc_queue, device_memc)
+        result_queue.put({'errors': errors, 'processed': 0})
+    except:
+        logging.exception("Error reading file: %s" % (fn))
+    logging.info("LineWorker finished task: file {}, errors={}".format(fn, errors))
 
 def dot_rename(path):
     head, fn = os.path.split(path)
     # atomic in most cases
     os.rename(path, os.path.join(head, "." + fn))
+
+
+def start_line_processes(pattern, memc_queue, result_queue, device_memc):
+    '''Parses files to strings and send them to work_queue'''
+    line_processes = []
+    for fn in glob.iglob(pattern):
+        logging.info('Processing %s' % fn)
+        line_processes.append(mp.Process(target=parse_file, args=(fn, memc_queue, result_queue, device_memc)))
+
+    for p in line_processes:
+        p.start()
+
+
+def start_memc_workers(memc_queue, result_queue):
+    '''Read packages from memc_queue and send them to Memcache servers'''
+    memc_client = MemcClient()
+    for w in range(0, opts.workers):
+        logging.info("Starting memc worker %s" % w)
+        memc_worker = MemcWorker(memc_client, memc_queue, result_queue)
+        memc_worker.start()
 
 
 def main(options):
@@ -202,43 +189,21 @@ def main(options):
         "dvid": options.dvid,
     }
 
-    # Init queues
-    work_queue = mp.Queue(maxsize=300000)
     memc_queue = mp.Queue(maxsize=300000)
     result_queue = Queue()
-
     processed = 0
     errors = 0
 
-    # Line workers: parse files to strings and send them to work_queue
-    for fn in glob.iglob(options.pattern):
-        logging.info('Processing %s' % fn)
-        producer = LineWorker(work_queue, result_queue, fn)
-        producer.start()
-
-    # Protobuf process: prepares packages from work_queue strings and sends them to memc_queue
-    proto_processes = [mp.Process(target=prepare_protobuf, args=(work_queue, memc_queue, result_queue, device_memc)) for x in range(2)]
-    for p in proto_processes:
-        p.start()
-
-    # Memc workers: read packages from memc_queue and send them to Memcache servers
-    memc_client = MemcClient()
-    memc_workers = []
-    for w in range(0, opts.workers):
-        logging.info("Starting memc worker %s" % w)
-        memc_worker = MemcWorker(memc_client, memc_queue, result_queue)
-        memc_worker.start()
-        memc_workers.append(memc_worker)
+    start_line_processes(options.pattern, memc_queue, result_queue, device_memc)
+    start_memc_workers(memc_queue, result_queue)
 
     # Waiting until all workers finish their tasks
-    while not work_queue.empty() or not memc_queue.empty():
-        logging.info("Work queue: {}, memc queue: {}, result queue: {}".format(work_queue.qsize(), memc_queue.qsize(), result_queue.unfinished_tasks))
+    while not memc_queue.empty():
+        logging.info("Memc queue: {}, result queue: {}".format(memc_queue.qsize(), result_queue.unfinished_tasks))
         time.sleep(10)
 
-    # Closing MemcWorkers. Protobuf process and LineWorkers are closed by themselves
-    for memc_worker in memc_workers:
-        memc_worker.disable()
-        logging.info("MemcWorker {} stopped".format(memc_worker))
+    # Closing MemcWorkers
+    memc_queue.put(SENTINEL)
 
     # Calculating stats
     while not result_queue.empty():
@@ -265,10 +230,10 @@ if __name__ == '__main__':
     op.add_option("-l", "--log", action="store", default=None)
     op.add_option("--dry", action="store_true", default=False)
     op.add_option("--pattern", action="store", default="/data/appsinstalled/*.tsv.gz")
-    op.add_option("--idfa", action="store", default="35.226.182.234:11211")
-    op.add_option("--gaid", action="store", default="35.232.4.163:11211")
-    op.add_option("--adid", action="store", default="35.226.182.234:11211")
-    op.add_option("--dvid", action="store", default="35.232.4.163:11211")
+    op.add_option("--idfa", action="store", default="35.238.204.0:11211")
+    op.add_option("--gaid", action="store", default="107.178.221.100:11211")
+    op.add_option("--adid", action="store", default="35.238.204.0:11211")
+    op.add_option("--dvid", action="store", default="107.178.221.100:11211")
     (opts, args) = op.parse_args()
     logging.basicConfig(filename=opts.log, level=logging.INFO if not opts.dry else logging.DEBUG,
                         format='[%(asctime)s] %(levelname).1s %(message)s', datefmt='%Y.%m.%d %H:%M:%S')
